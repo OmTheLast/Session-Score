@@ -2,6 +2,10 @@
 
 Session Score turns a coding session into music. A preset supplies the notes and the beat. Tool calls tell the player when to introduce a phrase, bring it back, or play an ending.
 
+## Audition ten electronic sounds
+
+Compare ten original 12-second sketches, from liquid drum and bass to ambient and hyperpop. Each follows the same scripted session. [Play the two-minute sampler or choose individual tracks](samples/README.md).
+
 ## Listen to Electronic
 
 [Play the 22-second Electronic preview](electronic.mp3). The track follows a scripted session at 120 BPM. Listen for the last note of each phrase.
