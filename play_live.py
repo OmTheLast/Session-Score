@@ -9,6 +9,7 @@ from uuid import UUID
 
 import sounddevice as sd
 
+from electronic import Electronic
 from score import Groove
 
 
@@ -20,27 +21,35 @@ def cue(event):
 
 
 def listen(stream, started_ms, queue):
+    last_call = None
     try:
         for line in stream:
             if line.startswith(b"data: "):
                 event = json.loads(line[6:])
+                if event["ts"] < started_ms:
+                    continue
                 sound = cue(event)
+                if sound in ("start", "finish"):
+                    last_call = None
+                elif sound == "call":
+                    identity = (event.get("tool"), event.get("sig")) if event.get("sig") else None
+                    if identity is not None and identity == last_call:
+                        sound = "repeat"
+                    last_call = identity
                 if sound:
-                    if event["ts"] >= started_ms:
-                        queue.put(sound)
-                    else:
-                        print("Earlier event:", sound, flush=True)
+                    queue.put(sound)
     finally:
         queue.put("disconnected")
 
 
-def play(session):
+def play(session, preset="groove"):
     started_ms = time.time_ns() // 1_000_000
     url = f"http://127.0.0.1:7377/events?agent=codex&session={session}"
     # Avoid sending loopback requests through a configured system proxy.
     stream = build_opener(ProxyHandler({})).open(url)
     device = sd.query_devices(kind="output")
-    synth = Groove(int(device["default_samplerate"]))
+    instrument = {"electronic": Electronic, "groove": Groove}[preset]
+    synth = instrument(int(device["default_samplerate"]))
     queue = SimpleQueue()
     Thread(target=listen, args=(stream, started_ms, queue), daemon=True).start()
     with sd.OutputStream(samplerate=synth.rate, channels=1, dtype="float32") as output:
@@ -67,7 +76,9 @@ def play(session):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("session", type=UUID)
+    parser.add_argument("--preset", choices=("groove", "electronic"), default="groove")
+    args = parser.parse_args()
     try:
-        play(parser.parse_args().session)
+        play(args.session, args.preset)
     except KeyboardInterrupt:
         pass

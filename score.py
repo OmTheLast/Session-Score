@@ -41,7 +41,7 @@ class Groove:
             self.buffer[:self.step] += 0.38 * attack * rim * np.exp(-24 * t)
 
     def play_step(self, events, active=True):
-        if "call" in events:
+        if "call" in events or "repeat" in events:
             self.busy_until = self.tick + 8
         if "finish" in events:
             self.busy_until = self.tick
@@ -56,6 +56,9 @@ class Groove:
                 self.note(root, 0.38, 0.57)
             if self.tick < self.busy_until and step in (3, 6, 7):
                 self.note(root + (12 if step == 6 else 7), 0.32, 0.25)
+        return self.next_block()
+
+    def next_block(self):
         self.tick += 1
         block = self.buffer[:self.step].copy()
         self.buffer[:-self.step] = self.buffer[self.step:]
