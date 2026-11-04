@@ -1,8 +1,33 @@
 # Session Score
 
-Session Score turns a coding session into music. A preset supplies the notes and the beat. Tool calls tell the player when to introduce a phrase, bring it back, or play an ending.
+Session Score lets you choose what your coding agent sounds like. Start with Classical, Electronic or Hyperpop, then assign a sound and pattern to each action.
 
-See how reads, edits, repeats and permission requests fit into the [proposed action map](ACTIONS.md).
+## Open the dashboard
+
+Install Node.js 22 or later, clone this repo, and run these commands from its folder.
+
+```sh
+npm run dev
+```
+
+Open [Session Score on your computer](http://127.0.0.1:8787). The dashboard uses Node's built-in server and browser audio. It has no npm dependencies.
+
+1. Pick a preset and tap sounds in **Try the kit**. The first sound bank includes synthesized 808 sub bass, kick, snare, clap and hats, plus keys, a string pad and a bright synth.
+2. Under **Make the rules**, choose the sound, pattern, pitch and level for each action. Use the play button to hear a mapping. Use ON/OFF to mute it.
+3. Press **Preview session** to hear a scripted read, edit, repeat and permission sequence using your settings.
+4. To follow an agent, start [Turbella](https://github.com/NakliTechie/turbella#install) and send a prompt in that agent. In the dashboard, refresh sessions, choose yours and press **Connect live**.
+
+Edits save in this browser separately for each preset. Export settings downloads the selected preset as JSON so someone else can import it. Each person runs the dashboard and Turbella on their own computer.
+
+**Stop all sound** stops the preview and disconnects a live session. Sound starts only after you press a preview or connect button. The page plays each action on the next eighth note. Instrument selection and event timing are shared by preview and live playback.
+
+The live feed contains tool names, statuses and hashes. A shell command gets the command sound even if it ran a test or read a file. Consecutive identical tool starts get the repeat mapping. Unknown tools use Other tool. A permission or stop event clears pending sounds before playing its own cue. Codex shell failures may lack a failure signal.
+
+The dashboard is available while the local server is running. Press Control-C in its terminal to stop it. If Turbella uses another port, start with `TURBELLA_PORT=7378 npm run dev`. If the dashboard port is busy, use `PORT=8788 npm run dev`.
+
+Run `npm test` to check event classification, preset file validation and the generated audio.
+
+See the broader [action design notes](ACTIONS.md) for the intended musical roles. The browser currently plays the individual mappings. A continuous backing arrangement remains part of the earlier Python experiments below.
 
 ## Audition ten electronic sounds
 
@@ -25,7 +50,7 @@ The live player recognizes consecutive starts of the same tool with the same inp
 
 The original electric piano groove is also available. [Listen to Groove](first-groove.mp3).
 
-## Play it live
+## Earlier Python player
 
 You need Python 3, a working audio output, and Turbella running locally with its Codex hooks enabled. Follow the [Turbella setup instructions](https://github.com/NakliTechie/turbella#install).
 

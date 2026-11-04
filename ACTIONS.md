@@ -1,10 +1,14 @@
 # How coding actions shape the score
 
-This is the proposed musical vocabulary for Session Score. A preset chooses the instruments, notes and beat. The action map tells it when to change a part. For example, a file edit can add a low synth in Electronic or a cello in Classical. Both listeners hear the same idea: the agent has started making a change.
+This document describes the musical vocabulary for Session Score and the earlier proposed arrangements. A preset chooses the instruments, notes and beat. The action map tells it when to change a part. For example, a file edit can add a low synth in Electronic or a cello in Classical. Both listeners hear the same idea: the agent has started making a change.
 
-## Live today
+## Dashboard today
 
-The Electronic player starts its backing on a turn, introduces a hook when a tool starts, varies the last note on a consecutive repeat, and plays an ending on a stop. A tool return refreshes the activity timer. It has no separate melody. After 15 seconds without activity, the backing rests. The ten audition clips use scripted events.
+The browser dashboard exposes a sound, pattern, pitch, level and mute setting for each tool family and outcome below. Classical, Electronic and Hyperpop are editable starting configurations. The browser saves each separately and supports preset JSON import and export. The preview and live Turbella stream use the same classifier and sound engine.
+
+A permission or stop event cancels pending sounds and plays its configured cue. A muted mapping stays in the action history. The browser plays individual cues on an eighth-note grid. The continuous backing, layered instrument roles and timed arrangement changes below describe further musical development.
+
+The earlier Python Electronic player starts its backing on a turn, introduces a hook when a tool starts, varies the last note on a consecutive repeat, and plays an ending on a stop. After 15 seconds without activity, its backing rests. The ten audition clips use scripted events.
 
 ## Proposed action map
 

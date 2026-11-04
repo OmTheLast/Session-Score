@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Session Score — Your agent, your sound</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="brand"><span class="brandmark" aria-hidden="true">≋</span> SESSION SCORE <span class="version">STUDIO / 01</span></a>
+  <div class="save-state"><span class="dot"></span><span id="save-status">Saved on this device</span></div>
+</header>
+<main>
+  <section class="intro">
+    <div><p class="eyebrow">MAKE THE SESSION YOURS</p><h1>Your agent.<br><span>Your sound.</span></h1><p class="subline">Pick a preset. Assign a sound to each action.<br>Hear your workflow take shape.</p></div>
+    <div class="intro-art" aria-hidden="true"><div class="record"><div class="record-label">SS<br><small>808</small></div></div><span class="art-caption">SOUND BANK 001 · SYNTHESIZED 808s</span></div>
+  </section>
+
+  <section aria-labelledby="presets-label">
+    <div class="section-heading"><h2 id="presets-label"><span class="number">01</span> Find your starting point</h2><span class="muted">Each preset keeps your edits</span></div>
+    <div class="presets">
+      <button class="preset classical" data-preset="classical" aria-pressed="false"><span class="preset-top">01 / CLASSICAL <span>↗</span></span><div class="keys-art" aria-hidden="true">▥ ▥ ▥ ▥ ▥ ▥</div><strong>Room to think.</strong><span>Soft keys · string pads · 84 BPM</span></button>
+      <button class="preset electronic" data-preset="electronic" aria-pressed="true"><span class="preset-top">02 / ELECTRONIC <span>↗</span></span><div class="wave-art" aria-hidden="true">▂ ▅ █ ▆ ▂ ▅ █ ▃ ▂ ▆</div><strong>Feel the low end.</strong><span>808 subs · crisp hats · 120 BPM</span></button>
+      <button class="preset hyperpop" data-preset="hyperpop" aria-pressed="false"><span class="preset-top">03 / HYPERPOP <span>↗</span></span><div class="spark-art" aria-hidden="true">✳ &nbsp; ✳ &nbsp; ✳</div><strong>A little more chaos.</strong><span>Bright synths · bass rolls · 150 BPM</span></button>
+    </div>
+  </section>
+
+  <section class="transport" aria-label="Playback controls">
+    <div class="transport-main"><button id="demo" class="primary">▶ Preview session</button><button id="stop" class="icon-button" aria-label="Stop all sound">■</button><div><strong id="transport-label">Ready when you are</strong><small id="transport-detail">A 10-second scripted session</small></div></div>
+    <div class="transport-settings">
+      <label>Tempo <span><input type="number" id="tempo" min="60" max="180" step="1" value="120" aria-label="Tempo in BPM"> <small>BPM</small></span></label>
+      <label class="volume-label">Master <input id="master" type="range" min="0" max="100" value="55" aria-label="Master volume"><output id="master-value">55%</output></label>
+    </div>
+  </section>
+
+  <div class="workspace">
+    <section class="mapping-panel" aria-labelledby="mapping-label">
+      <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted">Every action gets a voice. You choose which one.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
+      <div class="table-scroll"><table><thead><tr><th scope="col">AI ACTION</th><th scope="col">SOUND</th><th scope="col">PATTERN</th><th scope="col">PITCH</th><th scope="col">LEVEL</th><th scope="col"><span class="sr-only">Controls</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
+      <div class="mapping-footer"><span id="mapping-count">16 actions · your rules</span><div><button class="text-button" id="import">Import settings</button><button class="text-button" id="export">Export settings ↗</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
+      <p class="mapping-note">Tool names decide the action. Shell commands share one sound, including tests. A repeat means the same input appeared again.</p>
+    </section>
+
+    <aside>
+      <section class="side-panel" aria-labelledby="kit-label"><div class="section-heading"><h2 id="kit-label"><span class="number">03</span> Try the kit</h2><span class="tag">808</span></div><p class="muted">Tap a sound to hear it on its own.</p><div id="sound-kit" class="sound-kit"></div><p class="tiny">Original synthesized sounds. Bass is easiest to hear on headphones.</p></section>
+      <section class="side-panel" aria-labelledby="live-label"><div class="section-heading"><h2 id="live-label">Connect a session</h2><span class="connection-dot" id="connection-dot"></span></div><p class="muted" id="connection-status">Looking for Turbella on this Mac…</p><label class="sr-only" for="sessions">Agent session</label><select id="sessions"><option value="">Choose a session</option></select><div class="connection-actions"><button id="connect">Connect live</button><button id="refresh" class="text-button">Refresh ↻</button></div><p class="tiny">Start your agent with Turbella enabled. Incoming activity will play your mappings.</p></section>
+      <section class="side-panel activity-panel" aria-labelledby="activity-label"><div class="section-heading"><h2 id="activity-label">Activity</h2><span id="activity-mode" class="tag">IDLE</span></div><canvas id="meter" width="540" height="80" aria-label="Audio output meter"></canvas><ol id="activity"><li class="empty-activity">Your next action starts here.</li></ol></section>
+    </aside>
+  </div>
+  <footer><span>SESSION SCORE</span><span>Built for your ears. Configured by you.</span><a href="https://github.com/OmTheLast/Session-Score" target="_blank" rel="noreferrer">GitHub ↗</a></footer>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

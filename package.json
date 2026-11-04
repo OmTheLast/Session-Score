@@ -1,0 +1,10 @@
+{
+  "name": "session-score",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node dashboard/server.mjs",
+    "test": "node --test dashboard/model.test.mjs"
+  },
+  "engines": { "node": ">=22" }
+}
