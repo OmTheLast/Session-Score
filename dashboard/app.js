@@ -76,12 +76,30 @@ function labelMode(value) {
   $("transport-label").textContent = {idle: "Ready when you are", demo: "Playing your action map", live: "Following your agent"}[value];
   $("transport-detail").textContent = value === "live" ? "New events from your selected session" : "A 10-second scripted session";
 }
+function showVisualizer(session = "") {
+  const frame = $("turbella-view");
+  const open = $("visualizer-open");
+  frame.hidden = !session;
+  open.hidden = !session;
+  $("visualizer-empty").hidden = Boolean(session);
+  if (session) {
+    const path = "/api/visualizer?session=" + encodeURIComponent(session);
+    frame.src = path;
+    open.href = path + "&full=1";
+    $("visualizer-label").textContent = "Session " + session.slice(0, 8);
+  } else {
+    frame.removeAttribute("src");
+    open.removeAttribute("href");
+    $("visualizer-label").textContent = "Music + visuals · same session";
+  }
+}
 function stop() {
   run++;
   for (const timer of timers) clearTimeout(timer);
   timers = [];
   stream?.close();
   stream = null;
+  showVisualizer();
   classifier.reset();
   audio.stop();
   if (mode === "live") $("connection-status").textContent = "Disconnected. Your settings are ready.";
@@ -238,11 +256,17 @@ async function refresh() {
     if (!response.ok) throw new Error("Start Turbella, then refresh sessions.");
     const status = await response.json();
     const current = $("sessions").value;
+    const currentLabel = $("sessions").selectedOptions[0]?.textContent;
     $("sessions").replaceChildren(...options({"": "Choose a session"}, ""));
     for (const session of status.sessions || []) {
       const option = document.createElement("option"); option.value = session.session;
       const time = new Date(session.last).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
       option.textContent = `${session.agent} · ${session.session.slice(0,8)} · ${time}`;
+      $("sessions").append(option);
+    }
+    if (mode === "live" && current && ![...$("sessions").options].some(o => o.value === current)) {
+      const option = document.createElement("option");
+      option.value = current; option.textContent = currentLabel;
       $("sessions").append(option);
     }
     if ([...$("sessions").options].some(o => o.value === current)) $("sessions").value = current;
@@ -262,6 +286,7 @@ $("connect").addEventListener("click", async () => {
   let since = Date.now();
   classifier.reset();
   labelMode("live");
+  showVisualizer(session);
   $("connection-status").textContent = "Connecting to the event stream…";
   stream = new EventSource("/api/events?session=" + encodeURIComponent(session));
   stream.onopen = () => {$("connection-status").textContent = "Connected. Waiting for new agent activity."; $("connection-dot").classList.add("connected");};

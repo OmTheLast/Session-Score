@@ -15,7 +15,7 @@ Open [Session Score on your computer](http://127.0.0.1:8787). The dashboard uses
 1. Pick a preset and tap sounds in **Try the kit**. The first sound bank includes synthesized 808 sub bass, kick, snare, clap and hats, plus keys, a string pad and a bright synth.
 2. Under **Make the rules**, choose the sound, pattern, pitch and level for each action. Use the play button to hear a mapping. Use ON/OFF to mute it.
 3. Press **Preview session** to hear a scripted read, edit, repeat and permission sequence using your settings.
-4. To follow an agent, start [Turbella](https://github.com/NakliTechie/turbella#install) and send a prompt in that agent. In the dashboard, refresh sessions, choose yours and press **Connect live**.
+4. To follow an agent, start [Turbella](https://github.com/NakliTechie/turbella#install) and send a prompt in that agent. In the dashboard, refresh sessions, choose yours and press **Connect live**. The small Turbella window shows that same session. **Open larger** opens its full visualizer. Disconnecting or starting a scripted preview closes the embedded feed.
 
 Edits save in this browser separately for each preset. Export settings downloads the selected preset as JSON so someone else can import it. Each person runs the dashboard and Turbella on their own computer.
 

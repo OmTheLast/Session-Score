@@ -18,6 +18,17 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(403).end(); return;
   }
   const url = new URL(req.url, `http://127.0.0.1:${port}`);
+  if (url.pathname === "/api/visualizer") {
+    const session = url.searchParams.get("session");
+    if (!session || session.length > 200) {
+      res.writeHead(400).end("Choose a session."); return;
+    }
+    const target = new URL(`http://127.0.0.1:${upstreamPort}/viz`);
+    target.searchParams.set("session", session);
+    if (!url.searchParams.has("full")) target.searchParams.set("overlay", "1");
+    res.writeHead(302, {Location: target.href, "Cache-Control": "no-store"}).end();
+    return;
+  }
   if (url.pathname === "/api/status" || url.pathname === "/api/events") {
     const path = url.pathname.slice(4);
     const session = url.searchParams.get("session");
@@ -52,7 +63,7 @@ const server = http.createServer(async (req, res) => {
     const body = await readFile(new URL(file[0], root));
     res.writeHead(200, {
       "Content-Type": file[1], "Cache-Control": "no-store",
-      "Content-Security-Policy": "default-src 'self'; connect-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'",
+      "Content-Security-Policy": `default-src 'self'; connect-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; frame-src 'self' http://127.0.0.1:${upstreamPort}; object-src 'none'; frame-ancestors 'none'`,
       "X-Content-Type-Options": "nosniff"
     }).end(body);
   } catch { res.writeHead(500).end("Dashboard file missing."); }

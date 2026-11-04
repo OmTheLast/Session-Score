@@ -44,8 +44,22 @@
     </section>
 
     <aside>
+      <section class="side-panel live-panel" aria-labelledby="live-label">
+        <div class="section-heading"><h2 id="live-label">Live from Turbella</h2><span class="connection-dot" id="connection-dot"></span></div>
+        <p class="muted" id="connection-status">Looking for Turbella on this Mac…</p>
+        <label class="sr-only" for="sessions">Agent session</label>
+        <select id="sessions"><option value="">Choose a session</option></select>
+        <div class="connection-actions"><button id="connect">Connect live</button><button id="refresh" class="text-button">Refresh ↻</button></div>
+        <div class="visualizer-window">
+          <p id="visualizer-empty">Connect a session to see<br>its Turbella output here.</p>
+          <iframe id="turbella-view" title="Turbella visualizer for the connected agent session" hidden allow="autoplay"></iframe>
+        </div>
+        <div class="visualizer-caption"><span id="visualizer-label">Music + visuals · same session</span><a id="visualizer-open" hidden target="_blank" rel="noreferrer">Open larger ↗</a></div>
+        <p class="tiny">Send a prompt in Codex, refresh this list, then connect. Your action settings turn its events into sound. The window shows Turbella’s visuals.</p>
+      </section>
+
       <section class="side-panel" aria-labelledby="kit-label"><div class="section-heading"><h2 id="kit-label"><span class="number">03</span> Try the kit</h2><span class="tag">808</span></div><p class="muted">Tap a sound to hear it on its own.</p><div id="sound-kit" class="sound-kit"></div><p class="tiny">Original synthesized sounds. Bass is easiest to hear on headphones.</p></section>
-      <section class="side-panel" aria-labelledby="live-label"><div class="section-heading"><h2 id="live-label">Connect a session</h2><span class="connection-dot" id="connection-dot"></span></div><p class="muted" id="connection-status">Looking for Turbella on this Mac…</p><label class="sr-only" for="sessions">Agent session</label><select id="sessions"><option value="">Choose a session</option></select><div class="connection-actions"><button id="connect">Connect live</button><button id="refresh" class="text-button">Refresh ↻</button></div><p class="tiny">Start your agent with Turbella enabled. Incoming activity will play your mappings.</p></section>
+
       <section class="side-panel activity-panel" aria-labelledby="activity-label"><div class="section-heading"><h2 id="activity-label">Activity</h2><span id="activity-mode" class="tag">IDLE</span></div><canvas id="meter" width="540" height="80" aria-label="Audio output meter"></canvas><ol id="activity"><li class="empty-activity">Your next action starts here.</li></ol></section>
     </aside>
   </div>
