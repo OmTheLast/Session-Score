@@ -14,12 +14,12 @@ Open [Session Score on your computer](http://127.0.0.1:8787). The dashboard uses
 
 1. Pick a preset and tap sounds in **Try the kit**. The first sound bank includes synthesized 808 sub bass, kick, snare, clap and hats, plus keys, a string pad and a bright synth.
 2. Under **Make the rules**, choose the sound, pattern, pitch and level for each action. Use the play button to hear a mapping. Use ON/OFF to mute it.
-3. Press **Preview session** to hear a scripted read, edit, repeat and permission sequence using your settings.
-4. To follow an agent, start [Turbella](https://github.com/NakliTechie/turbella#install) and send a prompt in that agent. In the dashboard, refresh sessions, choose yours and press **Connect live**. The small Turbella window shows that same session. **Open larger** opens its full visualizer. Disconnecting or starting a scripted preview closes the embedded feed.
+3. Choose **Dark melody + 808** for a continuous A-minor arrangement, or **Individual action sounds** to hear your action mappings. Press **Preview session** to audition the selected mode.
+4. To follow an agent, start [Turbella](https://github.com/NakliTechie/turbella#install) and send a prompt in that agent. In the dashboard, refresh sessions, choose yours and turn **Link Codex** on. The newest Codex session is selected automatically. The small Turbella window shows that same session. **Open larger** opens its full visualizer. Disconnecting or starting a scripted preview closes the embedded feed.
 
 Edits save in this browser separately for each preset. Export settings downloads the selected preset as JSON so someone else can import it. Each person runs the dashboard and Turbella on their own computer.
 
-**Stop all sound** stops the preview and disconnects a live session. Sound starts only after you press a preview or connect button. The page plays each action on the next eighth note. Instrument selection and event timing are shared by preview and live playback.
+**Link Codex** starts or stops the live connection and its soundtrack. In Dark melody mode the track starts as soon as the stream connects. **Stop all sound** also stops the preview and disconnects a live session. Sound starts only after you press a preview or connect button. In Individual action sounds mode, the page plays each mapping on the next eighth note. Dark melody uses its own steady sixteenth-note clock and a four-bar arrangement.
 
 The live feed contains tool names, statuses and hashes. A shell command gets the command sound even if it ran a test or read a file. Consecutive identical tool starts get the repeat mapping. Unknown tools use Other tool. A permission or stop event clears pending sounds before playing its own cue. Codex shell failures may lack a failure signal.
 
@@ -27,7 +27,7 @@ The dashboard is available while the local server is running. Press Control-C in
 
 Run `npm test` to check event classification, preset file validation and the generated audio.
 
-See the broader [action design notes](ACTIONS.md) for the intended musical roles. The browser currently plays the individual mappings. A continuous backing arrangement remains part of the earlier Python experiments below.
+See the broader [action design notes](ACTIONS.md) for the intended musical roles. Dark melody is the first continuous browser arrangement. Edits increase bass activity, searches add hats, and repeated actions add a rim fill. Event bursts are capped at three intensity steps and applied at bar boundaries. Permission waits leave a quiet pad. A turn end finishes at the next bar and rests until new activity arrives.
 
 ## Audition ten electronic sounds
 

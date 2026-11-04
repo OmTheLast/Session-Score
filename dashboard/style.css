@@ -13,3 +13,14 @@
 .visualizer-caption{display:flex;justify-content:space-between;gap:8px;margin-top:9px;font:9px var(--mono);color:#8f9989}
 .visualizer-caption a{color:var(--accent);text-decoration:none}
 [hidden]{display:none!important}
+
+.transport-settings{flex-wrap:wrap;gap:15px}
+.transport{flex-wrap:wrap}
+.link-switch{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:12px}
+.link-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch-track{width:38px;height:22px;background:#444b40;border-radius:14px;position:relative}
+.switch-track:before{content:"";width:16px;height:16px;border-radius:50%;background:#b5bcae;position:absolute;top:3px;left:3px;transition:transform .15s}
+.link-switch input:checked + .switch-track{background:#c6f16f}
+.link-switch input:checked + .switch-track:before{background:#26321a;transform:translateX(16px)}
+.link-switch input:focus-visible + .switch-track{outline:2px solid var(--accent);outline-offset:3px}
+#link-state{color:#c6f16f;min-height:16px}

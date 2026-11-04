@@ -8,6 +8,7 @@ const files = new Map([
   ["/app.js", ["app.js", "text/javascript"]],
   ["/model.js", ["model.js", "text/javascript"]],
   ["/audio.js", ["audio.js", "text/javascript"]],
+  ["/dark-track.js", ["dark-track.js", "text/javascript"]],
   ["/style.css", ["style.css", "text/css"]]
 ]);
 const root = new URL(".", import.meta.url);

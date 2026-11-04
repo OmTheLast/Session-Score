@@ -6,7 +6,7 @@ This document describes the musical vocabulary for Session Score and the earlier
 
 The browser dashboard exposes a sound, pattern, pitch, level and mute setting for each tool family and outcome below. Classical, Electronic and Hyperpop are editable starting configurations. The browser saves each separately and supports preset JSON import and export. The preview and live Turbella stream use the same classifier and sound engine.
 
-A permission or stop event cancels pending sounds and plays its configured cue. A muted mapping stays in the action history. The browser plays individual cues on an eighth-note grid. The continuous backing, layered instrument roles and timed arrangement changes below describe further musical development.
+A permission or stop event cancels pending sounds and plays its configured cue. A muted mapping stays in the action history. Individual action sounds mode plays cues on an eighth-note grid. Dark melody mode uses a fixed four-bar A-minor score. In that mode, activity changes the arrangement instead of using the per-action sound mappings. Edits increase bass activity, searches add hats, and repeated actions add a rim fill at bar boundaries. A permission wait leaves a pad. A stop finishes at the next bar and rests. Playback and master-volume controls apply to both modes.
 
 The earlier Python Electronic player starts its backing on a turn, introduces a hook when a tool starts, varies the last note on a consecutive repeat, and plays an ending on a stop. After 15 seconds without activity, its backing rests. The ten audition clips use scripted events.
 

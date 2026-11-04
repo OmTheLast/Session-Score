@@ -54,7 +54,7 @@ export function preset(name) {
     mappings.repeat = rule("lead", "roll", 65, 12);
     mappings.finish = rule("lead", "fall", 55, 12);
   }
-  return {version: 1, preset: name, bpm: {classical: 84, electronic: 120, hyperpop: 150}[name] ?? 120, master: 55, mappings};
+  return {version: 1, preset: name, bpm: {classical: 84, electronic: 120, hyperpop: 150}[name] ?? 120, master: 55, arrangement: name === "electronic" ? "dark" : "actions", mappings};
 }
 export function validateConfig(value) {
   const number = (n, min, max) => Number.isFinite(n) && n >= min && n <= max;
@@ -63,6 +63,8 @@ export function validateConfig(value) {
   const clean = preset(value.preset);
   clean.bpm = value.bpm;
   clean.master = value.master;
+  if (value.arrangement !== undefined && !["dark", "actions"].includes(value.arrangement)) throw new Error("Unknown arrangement.");
+  clean.arrangement = value.arrangement ?? clean.arrangement;
   for (const [id] of ACTIONS) {
     const r = value.mappings?.[id];
     if (!r || !Object.hasOwn(SOUNDS, r.sound) || !Object.hasOwn(PATTERNS, r.pattern) ||

@@ -82,18 +82,22 @@ export class AudioEngine {
       rise: [[0, 0], [.5, 3], [1, 7]], fall: [[0, 7], [.5, 3], [1, 0]], hold: [[0, 0]]
     };
     for (const [offset, pitch] of phrases[mapping.pattern]) {
-      if (this.sources.size >= 40) break;
-      const source = this.context.createBufferSource();
-      const percussion = ["snare", "clap", "hat", "openhat", "rim"].includes(mapping.sound);
-      source.buffer = this.buffer(mapping.sound, percussion ? 0 : mapping.note + pitch);
-      source.playbackRate.value = (percussion ? 2 ** ((mapping.note + pitch) / 12) : 1) *
-        (mapping.pattern === "hold" ? .65 : 1);
-      const gain = this.context.createGain();
-      gain.gain.value = mapping.level / 100 * .65;
-      source.connect(gain).connect(this.master);
-      this.sources.add(source);
-      source.onended = () => {this.sources.delete(source); source.disconnect(); gain.disconnect();};
-      source.start(start + offset * beat);
+      this.hit(mapping.sound, mapping.note + pitch, mapping.level, start + offset * beat,
+        mapping.pattern === "hold" ? .65 : 1);
     }
+  }
+
+  hit(sound, note, level, when, speed = 1) {
+    if (!this.context || this.sources.size >= 64 || level <= 0) return;
+    const source = this.context.createBufferSource();
+    const percussion = ["snare", "clap", "hat", "openhat", "rim"].includes(sound);
+    source.buffer = this.buffer(sound, percussion ? 0 : note);
+    source.playbackRate.value = (percussion ? 2 ** (note / 12) : 1) * speed;
+    const gain = this.context.createGain();
+    gain.gain.value = level / 100 * .65;
+    source.connect(gain).connect(this.master);
+    this.sources.add(source);
+    source.onended = () => {this.sources.delete(source); source.disconnect(); gain.disconnect();};
+    source.start(when);
   }
 }

@@ -86,3 +86,52 @@ test("recognizes namespaced tools while keeping their repeat identities separate
   assert.equal(classifier.classify({...event, tool: "other.apply_patch"}), "edit");
   assert.equal(classifier.classify({...event, tool: "web.run"}), "search");
 });
+
+import {DarkScore, DarkTrack} from "./dark-track.js";
+test("a burst of agent events changes bar layers without creating extra notes", () => {
+  const baseline = new DarkScore(), busy = new DarkScore();
+  busy.event("edit");
+  for (let i = 0; i < 100; i++) busy.event("edit");
+  assert.equal(busy.energy, 3);
+  let baselineCount = 0, busyCount = 0;
+  for (let step = 0; step < 16; step++) {
+    baselineCount += baseline.next().length;
+    busyCount += busy.next().length;
+  }
+  assert.equal(busyCount - baselineCount, 2);
+});
+test("permission pauses drums, ending waits for the bar, and a new turn resumes", () => {
+  const score = new DarkScore();
+  score.event("permission");
+  for (let i = 0; i < 16; i++) assert.ok(score.next().every(n => n.sound === "strings"));
+  score.event("command");
+  assert.ok(score.next().some(n => n.sound === "kick"));
+  score.event("finish");
+  while (score.step % 16) score.next();
+  assert.ok(score.next().some(n => n.sound === "sub"));
+  assert.equal(score.state, "rest");
+  assert.equal(score.next().length, 0);
+  score.event("start");
+  assert.ok(score.next().some(n => n.sound === "kick"));
+});
+test("clock scheduling uses musical time and drops a delayed-tab backlog", () => {
+  const calls = [];
+  const audio = {context: {currentTime: 1}, hit: (...args) => calls.push(args)};
+  const track = new DarkTrack(audio, () => ({bpm: 120}));
+  track.score = new DarkScore();
+  track.at = .1;
+  track.schedule();
+  assert.ok(calls.length > 0 && calls.length < 15);
+  assert.ok(calls.every(c => c[3] >= 1));
+  assert.ok(track.at > 1.12);
+  const count = calls.length;
+  track.schedule();
+  assert.equal(calls.length, count);
+});
+test("older saved presets acquire an arrangement and new files retain it", () => {
+  const p = preset("electronic");
+  delete p.arrangement;
+  assert.equal(validateConfig(p).arrangement, "dark");
+  p.arrangement = "actions";
+  assert.equal(validateConfig(p).arrangement, "actions");
+});

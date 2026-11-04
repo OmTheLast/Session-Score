@@ -30,6 +30,7 @@
   <section class="transport" aria-label="Playback controls">
     <div class="transport-main"><button id="demo" class="primary">▶ Preview session</button><button id="stop" class="icon-button" aria-label="Stop all sound">■</button><div><strong id="transport-label">Ready when you are</strong><small id="transport-detail">A 10-second scripted session</small></div></div>
     <div class="transport-settings">
+      <label>Playback <select id="arrangement" aria-label="Playback arrangement"><option value="dark">Dark melody + 808</option><option value="actions">Individual action sounds</option></select></label>
       <label>Tempo <span><input type="number" id="tempo" min="60" max="180" step="1" value="120" aria-label="Tempo in BPM"> <small>BPM</small></span></label>
       <label class="volume-label">Master <input id="master" type="range" min="0" max="100" value="55" aria-label="Master volume"><output id="master-value">55%</output></label>
     </div>
@@ -37,7 +38,7 @@
 
   <div class="workspace">
     <section class="mapping-panel" aria-labelledby="mapping-label">
-      <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted">Every action gets a voice. You choose which one.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
+      <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted" id="mapping-help">These controls apply to Individual action sounds. Row previews always work.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
       <div class="table-scroll"><table><thead><tr><th scope="col">AI ACTION</th><th scope="col">SOUND</th><th scope="col">PATTERN</th><th scope="col">PITCH</th><th scope="col">LEVEL</th><th scope="col"><span class="sr-only">Controls</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
       <div class="mapping-footer"><span id="mapping-count">16 actions · your rules</span><div><button class="text-button" id="import">Import settings</button><button class="text-button" id="export">Export settings ↗</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
       <p class="mapping-note">Tool names decide the action. Shell commands share one sound, including tests. A repeat means the same input appeared again.</p>
@@ -49,13 +50,14 @@
         <p class="muted" id="connection-status">Looking for Turbella on this Mac…</p>
         <label class="sr-only" for="sessions">Agent session</label>
         <select id="sessions"><option value="">Choose a session</option></select>
-        <div class="connection-actions"><button id="connect">Connect live</button><button id="refresh" class="text-button">Refresh ↻</button></div>
+        <div class="connection-actions"><label class="link-switch"><input type="checkbox" id="codex-link" role="switch"><span class="switch-track"></span><strong>Link Codex</strong></label><button id="refresh" class="text-button">Refresh ↻</button></div>
+        <p id="link-state" class="tiny" role="status">OFF · sound is stopped</p>
         <div class="visualizer-window">
           <p id="visualizer-empty">Connect a session to see<br>its Turbella output here.</p>
           <iframe id="turbella-view" title="Turbella visualizer for the connected agent session" hidden allow="autoplay"></iframe>
         </div>
         <div class="visualizer-caption"><span id="visualizer-label">Music + visuals · same session</span><a id="visualizer-open" hidden target="_blank" rel="noreferrer">Open larger ↗</a></div>
-        <p class="tiny">Send a prompt in Codex, refresh this list, then connect. Your action settings turn its events into sound. The window shows Turbella’s visuals.</p>
+        <p class="tiny">Turn Link Codex on to follow the selected session. With Dark melody selected, edits add bass, searches add hats, and repeats add a short rim fill.</p>
       </section>
 
       <section class="side-panel" aria-labelledby="kit-label"><div class="section-heading"><h2 id="kit-label"><span class="number">03</span> Try the kit</h2><span class="tag">808</span></div><p class="muted">Tap a sound to hear it on its own.</p><div id="sound-kit" class="sound-kit"></div><p class="tiny">Original synthesized sounds. Bass is easiest to hear on headphones.</p></section>
