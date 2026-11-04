@@ -13,8 +13,8 @@ export const ACTIONS = [
   ["think", "Thinking event", "A reported thinking interval"],
   ["subagent", "Subagent activity", "Activity from a helper agent"],
   ["notification", "Notification", "A general agent notification"],
-  ["finish", "Turn ends", "The turn stops or compacts"],
-  ["stopError", "Turn ends with error", "The turn stops with an error"]
+  ["finish", "Turn ends", "Confirmed completion or cancellation stops all audio"],
+  ["stopError", "Turn ends with error", "A reported end stops all audio"]
 ];
 export const SOUNDS = {
   sub: "808 sub bass", kick: "808 kick", snare: "808 snare", clap: "808 clap",
@@ -78,7 +78,7 @@ const FAMILIES = {
   read: ["read", "read_file", "readfile", "view_file", "get_file"],
   search: ["search", "grep", "glob", "web_search", "browse", "web.run"],
   edit: ["edit", "write", "apply_patch", "write_file", "edit_file", "multiedit"],
-  command: ["bash", "shell", "exec_command", "run_command", "execute", "test"]
+  command: ["bash", "shell", "exec_command", "exec", "run_command", "execute", "test"]
 };
 export class Classifier {
   reset() { this.previous = null; }
@@ -101,14 +101,3 @@ export class Classifier {
     return Object.entries(FAMILIES).find(([,names]) => names.includes(tool))?.[0] ?? "other";
   }
 }
-export const DEMO = [
-  [0, {kind: "turn"}],
-  [1, {kind: "tool", status: "waiting", tool: "read_file", sig: "demo-read"}],
-  [2, {kind: "tool", status: "waiting", tool: "apply_patch", sig: "demo-edit"}],
-  [3, {kind: "tool", status: "ok", tool: "apply_patch", sig: "demo-edit"}],
-  [4, {kind: "tool", status: "waiting", tool: "apply_patch", sig: "demo-edit"}],
-  [5, {kind: "tool", status: "waiting", tool: "exec_command", sig: "demo-command"}],
-  [6, {kind: "permission", status: "waiting"}],
-  [7.5, {kind: "tool", status: "waiting", tool: "exec_command", sig: "demo-next"}],
-  [9, {kind: "stop"}]
-];

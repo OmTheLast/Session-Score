@@ -1,6 +1,7 @@
-import {ACTIONS, SOUNDS, PATTERNS, Classifier, DEMO, preset, validateConfig} from "./model.js";
+import {ACTIONS, SOUNDS, PATTERNS, Classifier, preset, validateConfig} from "./model.js";
 import {AudioEngine} from "./audio.js";
 import {DarkTrack} from "./dark-track.js";
+import {LiveSession} from "./live-session.js";
 
 const $ = id => document.getElementById(id);
 const audio = new AudioEngine();
@@ -19,7 +20,7 @@ try {
 const config = () => configs[selected];
 const track = new DarkTrack(audio, config);
 let stream = null;
-let timers = [];
+
 let mode = "idle";
 let run = 0;
 let toastTimer;
@@ -53,36 +54,45 @@ function log(action, source) {
   list.prepend(item);
   while (list.children.length > 6) list.lastChild.remove();
 }
-function showAction(action, source = "PREVIEW") {
+const live = new LiveSession({audio, track, onState: ({state, audible, reason, audioBlocked}) => {
+  $("connection-dot").classList.toggle("connected", state !== "unknown");
+  $("enable-audio").hidden = !audioBlocked;
+  const descriptions = {
+    working: audible ? (config().master === 0 ? "Codex working · master volume is zero" : "Codex working · bass + live actions") : "Codex working · click Enable audio",
+    idle: "Codex finished · silent until the next turn",
+    cancelled: "Codex cancelled · sound stopped",
+    unknown: reason || "Waiting for verified Codex state · silent"
+  };
+  $("link-state").textContent = descriptions[state] || descriptions.unknown;
+  $("transport-label").textContent = descriptions[state] || descriptions.unknown;
+  $("transport-detail").textContent = "Session " + (live.session?.slice(0, 8) || "—") + " · bass follows work; actions add layers";
+  $("activity-mode").textContent = state.toUpperCase();
+  const visibleSession = state === "working" ? live.session : "";
+  if (visualSession !== visibleSession) showVisualizer(visibleSession);
+}});
+let visualSession = "";
+setInterval(() => live.check(), 300);
+function showAction(action, source = "LIVE") {
   if (!action) return;
   audio.volume(config().master);
-  if (source === "PREVIEW" || config().arrangement === "actions") audio.trigger(config().mappings[action], config().bpm);
+  track.event(action);
   log(action, source);
   const row = document.querySelector(`tr[data-action="${action}"]`);
   row?.classList.add("triggered");
   setTimeout(() => row?.classList.remove("triggered"), 350);
 }
-function eventReceived(event, source) {
-  const action = classifier.classify(event);
-  // An approval wait or stop clears pending accents before its own cue.
-  if (config().arrangement === "dark") track.event(action);
-  else if (["permission", "denied", "finish", "stopError"].includes(action)) audio.stop();
-  showAction(action, source);
-}
 function labelMode(value) {
   mode = value;
   $("activity-mode").textContent = value.toUpperCase();
-  $("demo").textContent = value === "demo" ? "■ Stop preview" : "▶ Preview session";
   $("codex-link").checked = value === "live";
-  $("link-state").textContent = value === "live" ? "ON · waiting for the connection" : "OFF · sound is stopped";
-  $("connection-dot").classList.toggle("connected", value === "live");
+  $("link-state").textContent = value === "live" ? "Checking the selected Codex session…" : "OFF · audio disconnected";
+  $("connection-dot").classList.remove("connected");
   $("sessions").disabled = value === "live";
-  $("transport-label").textContent = {idle: "Ready when you are", demo: "Playing your action map", live: "Following your agent"}[value];
-  $("transport-detail").textContent = config().arrangement === "dark"
-    ? "A minor · steady melody · activity changes the layers"
-    : value === "live" ? "New events from your selected session" : "A 10-second scripted session";
+  $("transport-label").textContent = value === "live" ? "Checking Codex state" : "Audio disconnected";
+  $("transport-detail").textContent = "Bass while Codex works · real actions add layers";
 }
 function showVisualizer(session = "") {
+  visualSession = session;
   const frame = $("turbella-view");
   const open = $("visualizer-open");
   frame.hidden = !session;
@@ -101,8 +111,8 @@ function showVisualizer(session = "") {
 }
 function stop() {
   run++;
-  for (const timer of timers) clearTimeout(timer);
-  timers = [];
+  live.disconnect();
+  $("enable-audio").hidden = true;
   stream?.close();
   stream = null;
   showVisualizer();
@@ -116,28 +126,12 @@ async function ready() {
   try {
     await audio.ready();
     audio.volume(config().master);
+    audio.context.onstatechange = () => { if (live.connected) live.sync(); };
     return true;
   } catch {
     toast("Audio could not start. Check your browser’s audio permission and try again.");
     return false;
   }
-}
-async function demo() {
-  if (mode === "demo") { stop(); return; }
-  stop();
-  const token = run;
-  if (!await ready() || token !== run) return;
-  labelMode("demo");
-  const dark = config().arrangement === "dark";
-  if (dark) track.start();
-  for (const [seconds, event] of DEMO) {
-    timers.push(setTimeout(() => {
-      if (token === run) eventReceived(event, "DEMO");
-    }, seconds * (dark ? 2200 : 1000)));
-  }
-  timers.push(setTimeout(() => {
-    if (token === run) { track.stop(); audio.stop(); labelMode("idle"); timers = []; }
-  }, dark ? 26000 : 11000));
 }
 function options(values, chosen) {
   return Object.entries(values).map(([value,label]) => {
@@ -148,7 +142,6 @@ function options(values, chosen) {
 }
 function render() {
   for (const button of document.querySelectorAll("[data-preset]")) button.setAttribute("aria-pressed", String(button.dataset.preset === selected));
-  $("arrangement").value = config().arrangement;
   $("tempo").value = config().bpm;
   $("master").value = config().master;
   $("master-value").textContent = config().master + "%";
@@ -162,6 +155,12 @@ function render() {
     const title = document.createElement("strong"); title.textContent = label;
     const detail = document.createElement("small"); detail.textContent = description;
     name.append(title, detail); row.append(name);
+    if (["finish", "stopError", "failure", "permission", "denied", "think", "subagent", "notification"].includes(id)) {
+      const info = document.createElement("td"); info.colSpan = 5;
+      info.className = "muted";
+      info.textContent = id === "finish" ? "Automatic · completion or cancellation stops every sound" : "Not reported separately by this Codex connection";
+      row.append(info); $("mappings").append(row); continue;
+    }
     for (const [field, choices] of [["sound", SOUNDS], ["pattern", PATTERNS]]) {
       const cell = document.createElement("td");
       const select = document.createElement("select");
@@ -188,13 +187,6 @@ function render() {
     level.addEventListener("input", () => {mapping.level = Number(level.value); output.textContent = level.value; save();});
     container.append(level,output); levelCell.append(container); row.append(levelCell);
     const control = document.createElement("td");
-    const preview = document.createElement("button");
-    preview.className = "row-preview"; preview.textContent = "▶";
-    preview.setAttribute("aria-label", "Preview " + label);
-    preview.addEventListener("click", async () => {
-      if (!mapping.enabled) {toast("Unmute this action to hear its mapping."); return;}
-      if (await ready()) showAction(id);
-    });
     const mute = document.createElement("button");
     mute.className = "row-mute"; mute.textContent = mapping.enabled ? "ON" : "OFF";
     mute.setAttribute("aria-label", "Mute " + label);
@@ -206,25 +198,13 @@ function render() {
       mute.setAttribute("aria-pressed", String(!mapping.enabled));
       save();
     });
-    control.append(preview,mute); row.append(control);
+    control.append(mute); row.append(control);
     $("mappings").append(row);
   }
 }
-for (const [sound,label] of Object.entries(SOUNDS)) {
-  const button = document.createElement("button");
-  button.className = "pad";
-  button.textContent = label.replace("808 ", "");
-  button.setAttribute("aria-label", "Preview sound " + label);
-  const symbol = document.createElement("span"); symbol.textContent = "↗"; button.append(symbol);
-  button.addEventListener("click", async () => {
-    if (!await ready()) return;
-    audio.trigger({sound, pattern: "hit", note: 0, level: 75, enabled: true}, config().bpm, false);
-    button.classList.add("flash"); setTimeout(() => button.classList.remove("flash"), 200);
-  });
-  $("sound-kit").append(button);
-}
 document.querySelectorAll("[data-preset]").forEach(button => button.addEventListener("click", () => {
-  stop(); selected = button.dataset.preset; save(); render(); audio.volume(config().master);
+  selected = button.dataset.preset; save(); render(); audio.volume(config().master);
+  track.stop(); audio.stop(); if (live.connected) live.sync();
 }));
 $("tempo").addEventListener("change", () => {
   const input = $("tempo");
@@ -236,19 +216,10 @@ $("master").addEventListener("input", () => {
   $("master-value").textContent = config().master + "%";
   audio.volume(config().master); save();
 });
-$("arrangement").addEventListener("change", () => {
-  config().arrangement = $("arrangement").value;
-  track.stop(); audio.stop();
-  if (mode === "live" && config().arrangement === "dark") track.start();
-  if (mode === "demo") stop();
-  save();
-  if (mode === "idle") labelMode("idle");
-});
-$("demo").addEventListener("click", demo);
 $("stop").addEventListener("click", stop);
 $("reset").addEventListener("click", () => {
   if (!confirm("Reset this preset’s sounds and levels to its starting settings?")) return;
-  stop(); configs[selected] = preset(selected); render(); save(); toast("Preset reset.");
+  configs[selected] = preset(selected); render(); save(); audio.volume(config().master); toast("Sound settings reset.");
 });
 $("export").addEventListener("click", () => {
   const url = URL.createObjectURL(new Blob([JSON.stringify(config(), null, 2)], {type: "application/json"}));
@@ -262,8 +233,9 @@ $("import-file").addEventListener("change", async event => {
     if (!file) return;
     if (file.size > 100000) throw new Error("Choose a Session Score JSON file under 100 KB.");
     const imported = validateConfig(JSON.parse(await file.text()));
-    stop(); selected = imported.preset; configs[selected] = imported;
-    render(); save(); toast("Settings imported into " + selected + ".");
+    selected = imported.preset; configs[selected] = imported;
+    track.stop(); audio.stop(); if (live.connected) live.sync();
+    render(); save(); audio.volume(config().master); toast("Settings imported into " + selected + ".");
   } catch(error) {toast(error.message || "Could not read that preset.");}
   finally {event.target.value = "";}
 });
@@ -271,7 +243,7 @@ async function refresh() {
   const button = $("refresh"); button.disabled = true;
   try {
     const response = await fetch("/api/status");
-    if (!response.ok) throw new Error("Start Turbella, then refresh sessions.");
+    if (!response.ok) throw new Error("Cannot read local Codex sessions. Check that the local server is running.");
     const status = await response.json();
     const current = $("sessions").value;
     const currentLabel = $("sessions").selectedOptions[0]?.textContent;
@@ -288,8 +260,9 @@ async function refresh() {
       $("sessions").append(option);
     }
     if (current && [...$("sessions").options].some(o => o.value === current)) $("sessions").value = current;
+    else if (status.preferredSession && [...$("sessions").options].some(o => o.value === status.preferredSession)) $("sessions").value = status.preferredSession;
     else if ($("sessions").options.length > 1) $("sessions").selectedIndex = 1;
-    if (mode !== "live") $("connection-status").textContent = $("sessions").options.length > 1 ? "Turbella is ready. The newest Codex session is selected." : "Turbella is ready. Send a prompt in Codex, then refresh.";
+    if (mode !== "live") $("connection-status").textContent = $("sessions").options.length > 1 ? "Local Codex logs found. Check the session ID below, then link audio." : "Send a prompt in Codex on this Mac, then refresh.";
   } catch(error) {
     if (mode !== "live") $("connection-status").textContent = error.message;
   } finally {button.disabled = false;}
@@ -302,47 +275,46 @@ $("codex-link").addEventListener("change", async () => {
   $("codex-link").checked = true;
   $("link-state").textContent = "Connecting…";
   // Resume browser audio directly from the user's switch gesture.
-  if (!await ready() || token !== run) {
-    if (token === run) stop();
-    return;
-  }
+  await ready();
+  if (token !== run) return;
   if (!$("sessions").value) await refresh();
   if (token !== run) return;
   const session = $("sessions").value;
   if (!session) {
     stop(); toast("Send a prompt in Codex, then refresh sessions and turn the link on."); return;
   }
-  let since = Date.now();
   classifier.reset();
   labelMode("live");
-  showVisualizer(session);
-  $("connection-status").textContent = "Connecting to the event stream…";
+  live.connect(session);
+  $("connection-status").textContent = "Reading Codex session " + session.slice(0,8) + " directly from this Mac.";
   stream = new EventSource("/api/events?session=" + encodeURIComponent(session));
-  stream.onopen = () => {
+  stream.addEventListener("state", message => {
     if (token !== run) return;
-    $("connection-status").textContent = "Connected to Codex " + session.slice(0,8) + ".";
-    $("link-state").textContent = config().arrangement === "dark" ? "ON · dark track playing" : "ON · listening for new actions";
-    $("connection-dot").classList.add("connected");
-    if (config().arrangement === "dark" && !track.timer) track.start();
-  };
-  stream.onmessage = message => {
+    try {
+      const snapshot = JSON.parse(message.data);
+      const previous = live.state;
+      $("connection-status").textContent = "Following Codex " + session.slice(0,8) + " on this Mac.";
+      if (live.receive(snapshot) && previous !== snapshot.state) {
+        classifier.reset();
+        if (["idle", "cancelled"].includes(snapshot.state)) log("finish", snapshot.state.toUpperCase());
+      }
+    } catch { live.interrupted(); }
+  });
+  stream.addEventListener("action", message => {
     if (token !== run) return;
     try {
       const event = JSON.parse(message.data);
-      if (event.session !== session || !Number.isFinite(event.ts) || event.ts < since) return;
-      eventReceived(event, "LIVE");
-      $("link-state").textContent = event.kind === "stop" ? "ON · turn ended, waiting for a prompt" : "ON · receiving Codex activity";
-    } catch {toast("An unreadable event was skipped.");}
-  };
+      if (live.action(event)) showAction(classifier.classify(event));
+    } catch { toast("An unreadable event was skipped."); }
+  });
   stream.onerror = () => {
     if (token !== run) return;
-    since = Date.now();
-    classifier.reset();
-    track.stop(); audio.stop();
-    $("connection-dot").classList.remove("connected");
-    $("link-state").textContent = "ON · reconnecting, sound paused";
-    $("connection-status").textContent = "Connection interrupted. Retrying Turbella…";
+    classifier.reset(); live.interrupted();
+    $("connection-status").textContent = "Connection interrupted. Retrying the local Codex reader…";
   };
+});
+$("enable-audio").addEventListener("click", async () => {
+  if (await ready() && live.connected) live.sync();
 });
 const canvas = $("meter"), painter = canvas.getContext("2d"), bins = new Uint8Array(128);
 function drawMeter() {
@@ -356,5 +328,5 @@ function drawMeter() {
   requestAnimationFrame(drawMeter);
 }
 window.addEventListener("pagehide", stop);
-render(); refresh(); drawMeter();
+render(); labelMode("idle"); refresh(); drawMeter();
 if (!storageAvailable) { $("save-status").textContent = "Using default settings"; toast("Saved settings could not be loaded. The defaults are ready."); }

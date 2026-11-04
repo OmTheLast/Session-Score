@@ -12,22 +12,36 @@ npm run dev
 
 Open [Session Score on your computer](http://127.0.0.1:8787). The dashboard uses Node's built-in server and browser audio. It has no npm dependencies.
 
-1. Pick a preset and tap sounds in **Try the kit**. The first sound bank includes synthesized 808 sub bass, kick, snare, clap and hats, plus keys, a string pad and a bright synth.
-2. Under **Make the rules**, choose the sound, pattern, pitch and level for each action. Use the play button to hear a mapping. Use ON/OFF to mute it.
-3. Choose **Dark melody + 808** for a continuous A-minor arrangement, or **Individual action sounds** to hear your action mappings. Press **Preview session** to audition the selected mode.
-4. To follow an agent, start [Turbella](https://github.com/NakliTechie/turbella#install) and send a prompt in that agent. In the dashboard, refresh sessions, choose yours and turn **Link Codex** on. The newest Codex session is selected automatically. The small Turbella window shows that same session. **Open larger** opens its full visualizer. Disconnecting or starting a scripted preview closes the embedded feed.
+1. Choose your Codex session and turn **Link Codex** on. If this server was started from a Codex chat, that chat is selected first. Check the displayed session ID.
+2. While that session is working, a simple A-minor 808 bass line plays. Real tool actions add the sounds in **Make the rules**. The bass and accents share a beat.
+3. Choose Classical, Electronic or Hyperpop as starting sound settings, then change each action’s sound, pattern, pitch, level or mute. These settings do not simulate activity or start playback by themselves.
+4. Finishing or cancelling the selected Codex turn stops the bass, accents and queued notes. The link stays on for the next turn. **Disconnect audio** stops this page’s audio and connection. It does not cancel Codex.
 
-Edits save in this browser separately for each preset. Export settings downloads the selected preset as JSON so someone else can import it. Each person runs the dashboard and Turbella on their own computer.
+There is no scripted session preview or sound-audition player in the dashboard. Joining an active turn starts the bass immediately after the browser enables audio. Joining an idle session stays silent. If the browser suspends audio, the page shows **Enable audio**. Master volume at zero is also shown in the status.
 
-**Link Codex** starts or stops the live connection and its soundtrack. In Dark melody mode the track starts as soon as the stream connects. **Stop all sound** also stops the preview and disconnects a live session. Sound starts only after you press a preview or connect button. In Individual action sounds mode, the page plays each mapping on the next eighth note. Dark melody uses its own steady sixteenth-note clock and a four-bar arrangement.
+Edits save separately for each sound preset in this browser. Export and import preserve those settings. Older configuration files still load; their old arrangement field no longer changes live playback.
 
-The live feed contains tool names, statuses and hashes. A shell command gets the command sound even if it ran a test or read a file. Consecutive identical tool starts get the repeat mapping. Unknown tools use Other tool. A permission or stop event clears pending sounds before playing its own cue. Codex shell failures may lack a failure signal.
+### How the connection works
 
-The dashboard is available while the local server is running. Press Control-C in its terminal to stop it. If Turbella uses another port, start with `TURBELLA_PORT=7378 npm run dev`. If the dashboard port is busy, use `PORT=8788 npm run dev`.
+The Node server reads the selected session’s local Codex JSONL log under `$CODEX_HOME/sessions`, or `~/.codex/sessions`. It follows `task_started`, `task_complete` and `turn_aborted` records for work state, and tool call/return records for musical accents. It polls every 300 milliseconds. It reconstructs the current state when connecting, without replaying old actions. Compaction does not count as a turn ending.
 
-Run `npm test` to check event classification, preset file validation and the generated audio.
+The browser receives only session IDs, state, timestamps, tool names and argument hashes. Prompts, tool arguments, outputs and reasoning text are not sent to it. Tool names determine the sound category. Shell tools and the `exec` wrapper use the command sound, regardless of what their contents do. Consecutive identical calls use the repeat mapping. Tool returns indicate a returned result, not proof that the command succeeded. The reader does not infer errors or approval requests from tool output; unavailable categories are labelled in the dashboard.
 
-See the broader [action design notes](ACTIONS.md) for the intended musical roles. Dark melody is the first continuous browser arrangement. Edits increase bass activity, searches add hats, and repeated actions add a rim fill. Event bursts are capped at three intensity steps and applied at bar boundaries. Permission waits leave a quiet pad. A turn end finishes at the next bar and rests until new activity arrives.
+Accents start on an eighth-note grid. Repeated events in one subdivision share an accent, with at most two action patterns starting per eighth note. Only the bass repeats automatically. The selected action mappings control all other sounds.
+
+A lost browser connection pauses sound within about two seconds. If an open turn produces no new log records for two minutes, the page reports that its state is unknown and pauses until fresh records arrive. This protects against abandoned sessions, but can also pause a very long tool or thinking interval. Normal completion and cancellation stop sound on the next log poll, without waiting for the musical bar to end. Background-tab throttling and OS sleep can delay browser updates.
+
+The small Turbella visualizer remains optional and uses the same session ID. It is shown only while Codex is working. Turbella does not drive audio or decide when the turn ends. Its simulated visual waveform is not the dashboard’s audio meter; **Activity** shows the actual audio meter.
+
+This reader supports the local log format verified during development. It does not monitor remote sessions or Codex versions that omit these lifecycle records. Unsupported or unreadable state stays silent. No API key or Turbella plugin is required for dashboard audio.
+
+Keep the local server running while listening. Press Control-C in its terminal to stop it. Use `PORT=8788 npm run dev` if the default port is occupied. Use `TURBELLA_PORT=7378 npm run dev` if the optional visualizer runs on another port.
+
+Run `npm test` for lifecycle, cancellation, reconnect, session isolation, event timing, configuration and generated-audio checks. See [ACTIONS.md](ACTIONS.md) for the current action contract.
+
+## Earlier listening experiments
+
+The audio files and Python player below are earlier experiments. They are separate from the live dashboard.
 
 ## Audition ten electronic sounds
 

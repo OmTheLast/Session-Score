@@ -19,7 +19,7 @@
   </section>
 
   <section aria-labelledby="presets-label">
-    <div class="section-heading"><h2 id="presets-label"><span class="number">01</span> Find your starting point</h2><span class="muted">Each preset keeps your edits</span></div>
+    <div class="section-heading"><h2 id="presets-label"><span class="number">01</span> Find your starting point</h2><span class="muted">Sound settings only · no session previews</span></div>
     <div class="presets">
       <button class="preset classical" data-preset="classical" aria-pressed="false"><span class="preset-top">01 / CLASSICAL <span>↗</span></span><div class="keys-art" aria-hidden="true">▥ ▥ ▥ ▥ ▥ ▥</div><strong>Room to think.</strong><span>Soft keys · string pads · 84 BPM</span></button>
       <button class="preset electronic" data-preset="electronic" aria-pressed="true"><span class="preset-top">02 / ELECTRONIC <span>↗</span></span><div class="wave-art" aria-hidden="true">▂ ▅ █ ▆ ▂ ▅ █ ▃ ▂ ▆</div><strong>Feel the low end.</strong><span>808 subs · crisp hats · 120 BPM</span></button>
@@ -28,9 +28,8 @@
   </section>
 
   <section class="transport" aria-label="Playback controls">
-    <div class="transport-main"><button id="demo" class="primary">▶ Preview session</button><button id="stop" class="icon-button" aria-label="Stop all sound">■</button><div><strong id="transport-label">Ready when you are</strong><small id="transport-detail">A 10-second scripted session</small></div></div>
+    <div class="transport-main"><button id="stop" class="primary">Disconnect audio</button><button id="enable-audio" class="primary" hidden>Enable audio</button><div><strong id="transport-label">Ready when you are</strong><small id="transport-detail">Bass while Codex works · real actions add layers</small></div></div>
     <div class="transport-settings">
-      <label>Playback <select id="arrangement" aria-label="Playback arrangement"><option value="dark">Dark melody + 808</option><option value="actions">Individual action sounds</option></select></label>
       <label>Tempo <span><input type="number" id="tempo" min="60" max="180" step="1" value="120" aria-label="Tempo in BPM"> <small>BPM</small></span></label>
       <label class="volume-label">Master <input id="master" type="range" min="0" max="100" value="55" aria-label="Master volume"><output id="master-value">55%</output></label>
     </div>
@@ -38,29 +37,27 @@
 
   <div class="workspace">
     <section class="mapping-panel" aria-labelledby="mapping-label">
-      <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted" id="mapping-help">These controls apply to Individual action sounds. Row previews always work.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
+      <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted" id="mapping-help">Real actions add these sounds over the bass. Sounds share the same beat. End events stop all sound.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
       <div class="table-scroll"><table><thead><tr><th scope="col">AI ACTION</th><th scope="col">SOUND</th><th scope="col">PATTERN</th><th scope="col">PITCH</th><th scope="col">LEVEL</th><th scope="col"><span class="sr-only">Controls</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
-      <div class="mapping-footer"><span id="mapping-count">16 actions · your rules</span><div><button class="text-button" id="import">Import settings</button><button class="text-button" id="export">Export settings ↗</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
+      <div class="mapping-footer"><span id="mapping-count">8 live sound rules · automatic stop</span><div><button class="text-button" id="import">Import settings</button><button class="text-button" id="export">Export settings ↗</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
       <p class="mapping-note">Tool names decide the action. Shell commands share one sound, including tests. A repeat means the same input appeared again.</p>
     </section>
 
     <aside>
       <section class="side-panel live-panel" aria-labelledby="live-label">
-        <div class="section-heading"><h2 id="live-label">Live from Turbella</h2><span class="connection-dot" id="connection-dot"></span></div>
-        <p class="muted" id="connection-status">Looking for Turbella on this Mac…</p>
+        <div class="section-heading"><h2 id="live-label">Live from Codex</h2><span class="connection-dot" id="connection-dot"></span></div>
+        <p class="muted" id="connection-status">Looking for Codex sessions on this Mac…</p>
         <label class="sr-only" for="sessions">Agent session</label>
         <select id="sessions"><option value="">Choose a session</option></select>
         <div class="connection-actions"><label class="link-switch"><input type="checkbox" id="codex-link" role="switch"><span class="switch-track"></span><strong>Link Codex</strong></label><button id="refresh" class="text-button">Refresh ↻</button></div>
         <p id="link-state" class="tiny" role="status">OFF · sound is stopped</p>
         <div class="visualizer-window">
-          <p id="visualizer-empty">Connect a session to see<br>its Turbella output here.</p>
-          <iframe id="turbella-view" title="Turbella visualizer for the connected agent session" hidden allow="autoplay"></iframe>
+          <p id="visualizer-empty">Turbella visuals appear while<br>the selected Codex session works.</p>
+          <iframe id="turbella-view" title="Turbella visualizer for the connected agent session" hidden></iframe>
         </div>
         <div class="visualizer-caption"><span id="visualizer-label">Music + visuals · same session</span><a id="visualizer-open" hidden target="_blank" rel="noreferrer">Open larger ↗</a></div>
-        <p class="tiny">Turn Link Codex on to follow the selected session. With Dark melody selected, edits add bass, searches add hats, and repeats add a short rim fill.</p>
+        <p class="tiny">Link Codex enables audio for this session. Bass starts during work. Real actions add your sounds. Finishing or cancelling stops playback. Disconnect audio silences this page; it does not stop Codex.</p>
       </section>
-
-      <section class="side-panel" aria-labelledby="kit-label"><div class="section-heading"><h2 id="kit-label"><span class="number">03</span> Try the kit</h2><span class="tag">808</span></div><p class="muted">Tap a sound to hear it on its own.</p><div id="sound-kit" class="sound-kit"></div><p class="tiny">Original synthesized sounds. Bass is easiest to hear on headphones.</p></section>
 
       <section class="side-panel activity-panel" aria-labelledby="activity-label"><div class="section-heading"><h2 id="activity-label">Activity</h2><span id="activity-mode" class="tag">IDLE</span></div><canvas id="meter" width="540" height="80" aria-label="Audio output meter"></canvas><ol id="activity"><li class="empty-activity">Your next action starts here.</li></ol></section>
     </aside>

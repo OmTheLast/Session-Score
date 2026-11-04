@@ -1,9 +1,15 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {Classifier, preset, validateConfig, ACTIONS, DEMO} from "./model.js";
+import {Classifier, preset, validateConfig, ACTIONS} from "./model.js";
 import {AudioEngine} from "./audio.js";
 
-test("classifies the full demo and tracks repeats across returns", () => {
+const DEMO = [
+  [0,{kind:"turn"}], [1,{kind:"tool",status:"waiting",tool:"read_file",sig:"read"}],
+  [2,{kind:"tool",status:"waiting",tool:"apply_patch",sig:"edit"}], [3,{kind:"tool",status:"ok"}],
+  [4,{kind:"tool",status:"waiting",tool:"apply_patch",sig:"edit"}], [5,{kind:"tool",status:"waiting",tool:"exec_command",sig:"cmd"}],
+  [6,{kind:"permission",status:"waiting"}], [7,{kind:"tool",status:"waiting",tool:"exec_command",sig:"next"}], [9,{kind:"stop"}]
+];
+test("classifies a fixture sequence and tracks repeats across returns", () => {
   const classifier = new Classifier();
   assert.deepEqual(DEMO.map(([, event]) => classifier.classify(event)), [
     "start", "read", "edit", "return", "repeat", "command", "permission", "command", "finish"
@@ -88,31 +94,27 @@ test("recognizes namespaced tools while keeping their repeat identities separate
 });
 
 import {DarkScore, DarkTrack} from "./dark-track.js";
-test("a burst of agent events changes bar layers without creating extra notes", () => {
-  const baseline = new DarkScore(), busy = new DarkScore();
-  busy.event("edit");
-  for (let i = 0; i < 100; i++) busy.event("edit");
-  assert.equal(busy.energy, 3);
-  let baselineCount = 0, busyCount = 0;
-  for (let step = 0; step < 16; step++) {
-    baselineCount += baseline.next().length;
-    busyCount += busy.next().length;
-  }
-  assert.equal(busyCount - baselineCount, 2);
-});
-test("permission pauses drums, ending waits for the bar, and a new turn resumes", () => {
+test("the foundation is bass only and live event bursts are bounded", () => {
   const score = new DarkScore();
-  score.event("permission");
-  for (let i = 0; i < 16; i++) assert.ok(score.next().every(n => n.sound === "strings"));
-  score.event("command");
-  assert.ok(score.next().some(n => n.sound === "kick"));
-  score.event("finish");
-  while (score.step % 16) score.next();
-  assert.ok(score.next().some(n => n.sound === "sub"));
-  assert.equal(score.state, "rest");
-  assert.equal(score.next().length, 0);
-  score.event("start");
-  assert.ok(score.next().some(n => n.sound === "kick"));
+  const notes = Array.from({length: 32}, () => score.next()).flat();
+  assert.equal(notes.length, 6);
+  assert.ok(notes.every(n => n.sound === "sub"));
+  const calls = [], accents = [];
+  const audio = {context: {currentTime: 1}, hit: (...args) => calls.push(args), trigger: (...args) => accents.push(args)};
+  const cfg = preset("electronic");
+  const track = new DarkTrack(audio, () => cfg);
+  track.start();
+  try {
+    for (let i = 0; i < 100; i++) track.event("edit");
+    track.event("search"); track.event("command");
+    assert.equal(track.pending.size, 3);
+    audio.context.currentTime = 1.1; track.schedule();
+    audio.context.currentTime = 1.2; track.schedule();
+    assert.equal(accents.length, 2);
+    assert.deepEqual(accents[0][0], cfg.mappings.edit);
+    track.stop();
+    assert.equal(track.pending.size, 0);
+  } finally { track.stop(); }
 });
 test("clock scheduling uses musical time and drops a delayed-tab backlog", () => {
   const calls = [];

@@ -1,57 +1,46 @@
-# How coding actions shape the score
+# How Codex actions shape the score
 
-This document describes the musical vocabulary for Session Score and the earlier proposed arrangements. A preset chooses the instruments, notes and beat. The action map tells it when to change a part. For example, a file edit can add a low synth in Electronic or a cello in Classical. Both listeners hear the same idea: the agent has started making a change.
+The live dashboard plays a basic A-minor 808 bass line while the selected Codex turn is working. Real actions add the sounds chosen by the listener. There is no scripted session player.
 
-## Dashboard today
+## Work state
 
-The browser dashboard exposes a sound, pattern, pitch, level and mute setting for each tool family and outcome below. Classical, Electronic and Hyperpop are editable starting configurations. The browser saves each separately and supports preset JSON import and export. The preview and live Turbella stream use the same classifier and sound engine.
+| Local Codex record | Dashboard behavior |
+| --- | --- |
+| `task_started` | Start the bass. Clear the previous turn’s repeat history. |
+| Already working when connected | Start the bass without replaying old actions. |
+| `task_complete` for the current turn | Stop all audio, including scheduled notes. Keep listening for the next turn. |
+| `turn_aborted` for the current turn | Stop all audio and display cancellation. |
+| Completion for an older turn | Leave the current turn’s state unchanged. |
+| Connection interrupted | Pause audio. Reconstruct current state when connected again. |
+| No new log records for two minutes during an open turn | Display unknown state and pause. Fresh records restore playback. |
 
-A permission or stop event cancels pending sounds and plays its configured cue. A muted mapping stays in the action history. Individual action sounds mode plays cues on an eighth-note grid. Dark melody mode uses a fixed four-bar A-minor score. In that mode, activity changes the arrangement instead of using the per-action sound mappings. Edits increase bass activity, searches add hats, and repeated actions add a rim fill at bar boundaries. A permission wait leaves a pad. A stop finishes at the next bar and rests. Playback and master-volume controls apply to both modes.
+The reader checks every 300 milliseconds. The browser also pauses if state messages stop arriving for two seconds. Audio disconnect does not stop the Codex process. Browser scheduling and OS sleep can delay updates.
 
-The earlier Python Electronic player starts its backing on a turn, introduces a hook when a tool starts, varies the last note on a consecutive repeat, and plays an ending on a stop. After 15 seconds without activity, its backing rests. The ten audition clips use scripted events.
+## Editable live sounds
 
-## Proposed action map
+| Action | How it is recognized |
+| --- | --- |
+| Turn starts | A new `task_started` record received while linked. |
+| Read | A named read or file-inspection tool. |
+| Search | A named search or browse tool. |
+| Edit | A named edit, write or patch tool. |
+| Run a command | A shell tool, test tool or the `exec` wrapper. |
+| Other tool | A tool name outside the known categories. |
+| Repeat | Consecutive calls with the same tool name and argument hash. |
+| Tool returns | A return record matched to a tool call. This does not prove success. |
 
-### Which part plays?
+Each live rule selects a synthesized instrument, pattern, pitch, level and mute setting. Classical, Electronic and Hyperpop provide editable starting settings. Changing settings does not create an agent event or start idle playback.
 
-Use the reported tool name to pick a part when a call starts. These names are examples. Each agent adapter needs its own list of exact names. An unfamiliar name gets the general tool sound.
+The bass keeps a shared sixteenth-note clock. Accents enter on eighth notes. Same-action bursts merge, and at most two action patterns start on each eighth note. Stopping clears queued accents and already scheduled audio sources immediately after the state update. Action history still records muted and merged events.
 
-| Tool action | Musical part | Electronic example |
-| --- | --- | --- |
-| Read or inspect | Play a light phrase high in the arrangement. | A two-note glass pluck. |
-| Search or browse | Add a moving pattern for one bar. | A rising three-note arpeggio. |
-| Write, edit or patch | Bring in a lower, fuller voice for one bar. | A low synth doubles the bass rhythm. |
-| Run a command | Add a rhythmic figure for one bar. | A syncopated kick and rim pattern. |
-| Other tool starts | Play the preset's main hook once. | The existing E–G–B phrase. |
+The log reader forwards metadata only. It hashes tool arguments locally and does not send prompts, arguments, output or reasoning text to the browser. Shell contents are not inspected to guess whether a command read, edited or tested a file.
 
-Treat an explicitly named test tool as a command. Codex commonly exposes several activities through one shell tool. When the tool is just `exec_command`, use the command part whether the underlying command reads a file, runs a test, or builds the project. Input hashes let us detect repetition without revealing what the command says.
+## Signals not separately available
 
-### What happened to the action?
+The current adapter does not infer permission waits, permission denial, tool failure, thinking intervals, subagent activity, notifications or error-specific turn endings. Their older saved mappings remain compatible, but their rows are labelled unavailable and do not offer active controls. Confirmed completion and cancellation always stop sound, regardless of any saved ending mapping.
 
-| Signal | How to recognize it | Musical instruction |
-| --- | --- | --- |
-| Turn starts | `turn` | Start the groove on a downbeat. Clear the previous turn's repeat history. |
-| Tool returns normally | `tool` with `ok` | Let its figure finish. Keep the beat moving without adding a success jingle. |
-| Same action repeats | Consecutive tool starts within one turn share a tool name and a nonempty input signature. | Keep that part and melody. Split its final note into two pulses. |
-| Tool failure or agent error reported | `tool_fail`, `error`, or a tool event carrying `error` | Add a short tense interval on the next beat. Release it after one bar. |
-| Permission requested | `permission` with `waiting` | Drop the drums and hold a quiet chord for up to one bar, then rest. Resume on new tool activity. |
-| Permission denied | `permission` or `tool` with `denied` | Cut the held chord. Leave one beat of space. |
-| Thinking time reported | `think`, sometimes with `dur_ms` | Swell a pad once, capped at one bar. This is a cue on receipt of the event. |
-| Subagent activity | `subagent` | Let a second instrument answer once. The stream gives starts and stops the same event kind and status. |
-| General notification | `notification` | Silent by default. Reserve the distinctive pause for permission requests. |
-| Turn stops | `stop` with `ok` | End on the current chord and rest. Turbella can also emit this at context compaction. |
-| Turn stops with an error | `stop` with `error` | End on a suspended chord and rest. |
-| No new activity | Local timer | Let existing notes decay. Rest after 15 seconds. An idle stretch alone says nothing about the outcome. |
+Turbella supplies the optional visualizer only. Its hook stream is not used for music or authoritative work state. Its visual waveform is simulated; the dashboard’s Activity meter measures actual browser audio.
 
-### What takes priority?
+## Verification
 
-- Keep a fixed tempo. Place musical changes on the next eighth note. Multiple calls on the same subdivision may share one audible accent.
-- Track every event in order, even when the listener hears only one accent. A new turn clears old state. A stop ends its turn even when a tool cue arrives in the same batch.
-- Within a turn, a permission pause takes precedence over ordinary tool parts until activity resumes. A reported failure takes precedence over a repeat accent on the same subdivision.
-- Keep three controls separate in each preset: instrument for each tool family, variation for each outcome, and volume or mute for each part. Muting a sound should preserve the underlying action history.
-
-## First listening test
-
-Use a scripted read → edit → same edit → permission request → stop. Listen without looking. Can you tell when the agent started changing a file, when it repeated the edit, and when it needed you? Adjust one part at a time.
-
-The stream supplies event kinds, statuses, tool names, durations and hashes. A shell return in Codex can lack an exit code. Only play the failure cue when the stream supplies a failure signal. [Turbella event contract](https://github.com/NakliTechie/turbella/blob/bf4809a/docs/PLUGINS.md) · [Codex adapter](https://github.com/NakliTechie/turbella/blob/bf4809a/src/agents.js)
+Automated checks cover joining a working or finished session, cancellation, completion, older-turn completions, partial log writes, historical event exclusion, another session’s events, lost connections, suspended audio, event bursts, and preset validation. A local HTTP integration test appends isolated lifecycle and tool records and checks the emitted stream. Synthetic fixtures are test-only and never run in the dashboard.

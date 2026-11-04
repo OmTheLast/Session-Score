@@ -12,7 +12,14 @@ export class AudioEngine {
       this.analyser.fftSize = 256;
       this.master.connect(this.compressor).connect(this.analyser).connect(this.context.destination);
     }
-    await this.context.resume();
+    let timeout;
+    try {
+      await Promise.race([
+        this.context.resume(),
+        new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error("Audio permission timed out")), 2500); })
+      ]);
+    } finally { clearTimeout(timeout); }
+    if (this.context.state !== "running") throw new Error("Audio is suspended");
   }
   volume(value) {
     if (this.context) this.master.gain.setTargetAtTime(value / 100 * 0.75, this.context.currentTime, 0.015);
@@ -71,12 +78,12 @@ export class AudioEngine {
     this.buffers.set(key, buffer);
     return buffer;
   }
-  trigger(mapping, bpm, quantize = true) {
-    if (!this.context || !mapping.enabled || mapping.level === 0) return;
+  trigger(mapping, bpm, quantize = true, startAt = null) {
+    if (!this.context || !mapping || !mapping.enabled || mapping.level === 0) return;
     const beat = 60 / bpm;
     const step = beat / 2;
     const now = this.context.currentTime + .015;
-    const start = quantize ? Math.ceil(now / step) * step : now;
+    const start = startAt ?? (quantize ? Math.ceil(now / step) * step : now);
     const phrases = {
       hit: [[0, 0]], double: [[0, 0], [.5, 0]], roll: [[0, 0], [.25, 0], [.5, 0], [.75, 0]],
       rise: [[0, 0], [.5, 3], [1, 7]], fall: [[0, 7], [.5, 3], [1, 0]], hold: [[0, 0]]

@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node dashboard/server.mjs",
-    "test": "node --test dashboard/model.test.mjs"
+    "test": "node --test dashboard/*.test.mjs"
   },
   "engines": { "node": ">=22" }
 }
