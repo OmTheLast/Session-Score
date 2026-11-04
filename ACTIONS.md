@@ -1,6 +1,6 @@
 # How Codex actions shape the score
 
-The live dashboard plays a basic A-minor 808 bass line while the selected Codex turn is working. Real actions add the sounds chosen by the listener. There is no scripted session player.
+The live dashboard plays a four-bar A-minor bass melody with held notes while the selected Codex turn is working. Real actions add the sounds chosen by the listener. There is no scripted session player.
 
 ## Work state
 

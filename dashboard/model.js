@@ -17,7 +17,7 @@ export const ACTIONS = [
   ["stopError", "Turn ends with error", "A reported end stops all audio"]
 ];
 export const SOUNDS = {
-  sub: "808 sub bass", kick: "808 kick", snare: "808 snare", clap: "808 clap",
+  bass: "Melodic bass", sub: "808 sub bass", kick: "808 kick", snare: "808 snare", clap: "808 clap",
   hat: "Closed hat", openhat: "Open hat", rim: "Rimshot",
   piano: "Soft keys", strings: "String pad", lead: "Bright synth"
 };

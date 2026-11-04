@@ -52,14 +52,14 @@ test("all generated sound buffers are finite, non-silent and have distinct audio
     }
   };
   const keys = new Set();
-  for (const sound of ["sub","kick","snare","clap","hat","openhat","rim","piano","strings","lead"]) {
+  for (const sound of ["bass","sub","kick","snare","clap","hat","openhat","rim","piano","strings","lead"]) {
     const data = engine.buffer(sound).getChannelData(0);
     assert.ok(data.every(Number.isFinite));
     assert.ok(data.some(v => Math.abs(v) > .1));
     assert.ok(data.every(v => Math.abs(v) < 1.5));
     keys.add(Array.from(data.slice(100,120)).join(","));
   }
-  assert.equal(keys.size, 10);
+  assert.equal(keys.size, 11);
 });
 test("mute, volume, timing and pitch reach the audio scheduler", () => {
   const engine = new AudioEngine();
@@ -96,9 +96,12 @@ test("recognizes namespaced tools while keeping their repeat identities separate
 import {DarkScore, DarkTrack} from "./dark-track.js";
 test("the foundation is bass only and live event bursts are bounded", () => {
   const score = new DarkScore();
-  const notes = Array.from({length: 32}, () => score.next()).flat();
-  assert.equal(notes.length, 6);
-  assert.ok(notes.every(n => n.sound === "sub"));
+  const phrase = Array.from({length: 64}, () => score.next());
+  const notes = phrase.flat();
+  assert.ok(notes.every(n => n.sound === "bass" && n.steps > 0));
+  assert.ok(new Set(notes.map(n => n.note)).size >= 5);
+  assert.ok(notes.some(n => n.steps >= 4));
+  assert.deepEqual(Array.from({length: 64}, () => score.next()), phrase);
   const calls = [], accents = [];
   const audio = {context: {currentTime: 1}, hit: (...args) => calls.push(args), trigger: (...args) => accents.push(args)};
   const cfg = preset("electronic");

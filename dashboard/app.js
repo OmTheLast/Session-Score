@@ -58,7 +58,7 @@ const live = new LiveSession({audio, track, onState: ({state, audible, reason, a
   $("connection-dot").classList.toggle("connected", state !== "unknown");
   $("enable-audio").hidden = !audioBlocked;
   const descriptions = {
-    working: audible ? (config().master === 0 ? "Codex working · master volume is zero" : "Codex working · bass + live actions") : "Codex working · click Enable audio",
+    working: audible ? (config().master === 0 ? "Codex working · master volume is zero" : "Codex working · bass melody + live actions") : "Codex working · click Enable audio",
     idle: "Codex finished · silent until the next turn",
     cancelled: "Codex cancelled · sound stopped",
     unknown: reason || "Waiting for verified Codex state · silent"
@@ -89,7 +89,7 @@ function labelMode(value) {
   $("connection-dot").classList.remove("connected");
   $("sessions").disabled = value === "live";
   $("transport-label").textContent = value === "live" ? "Checking Codex state" : "Audio disconnected";
-  $("transport-detail").textContent = "Bass while Codex works · real actions add layers";
+  $("transport-detail").textContent = "Bass melody while Codex works · real actions add layers";
 }
 function showVisualizer(session = "") {
   visualSession = session;

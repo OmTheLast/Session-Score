@@ -13,7 +13,7 @@ npm run dev
 Open [Session Score on your computer](http://127.0.0.1:8787). The dashboard uses Node's built-in server and browser audio. It has no npm dependencies.
 
 1. Choose your Codex session and turn **Link Codex** on. If this server was started from a Codex chat, that chat is selected first. Check the displayed session ID.
-2. While that session is working, a simple A-minor 808 bass line plays. Real tool actions add the sounds in **Make the rules**. The bass and accents share a beat.
+2. While that session is working, a four-bar A-minor bass melody with held notes plays. Real tool actions add the sounds in **Make the rules**. The bass and accents share a beat.
 3. Choose Classical, Electronic or Hyperpop as starting sound settings, then change each action’s sound, pattern, pitch, level or mute. These settings do not simulate activity or start playback by themselves.
 4. Finishing or cancelling the selected Codex turn stops the bass, accents and queued notes. The link stays on for the next turn. **Disconnect audio** stops this page’s audio and connection. It does not cancel Codex.
 

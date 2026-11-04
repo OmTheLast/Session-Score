@@ -34,7 +34,7 @@ export class AudioEngine {
     const key = sound + semitones;
     if (this.buffers.has(key)) return this.buffers.get(key);
     const rate = this.context.sampleRate;
-    const duration = {sub: 1.3, kick: .55, snare: .28, clap: .27, hat: .09, openhat: .42, rim: .12, piano: 1.2, strings: 1.8, lead: .65}[sound];
+    const duration = {bass: 2.6, sub: 1.3, kick: .55, snare: .28, clap: .27, hat: .09, openhat: .42, rim: .12, piano: 1.2, strings: 1.8, lead: .65}[sound];
     const buffer = this.context.createBuffer(1, Math.ceil(rate * duration), rate);
     const data = buffer.getChannelData(0);
     const base = 55 * 2 ** (semitones / 12);
@@ -48,7 +48,12 @@ export class AudioEngine {
       const fade = Math.min(1, (duration - t) / .04);
       const attack = Math.min(1, t / .004);
       let value = 0;
-      if (sound === "sub" || sound === "kick") {
+      if (sound === "bass") {
+        // Stable pitch and a rounded sustain make the tune audible above the sub.
+        const p = 2 * Math.PI * base * t;
+        const tone = Math.sin(p) + .3 * Math.sin(2 * p) + .12 * Math.sin(3 * p);
+        value = Math.tanh(tone * 1.1) * Math.min(1, t / .018) * Math.exp(-t * .65) * .8;
+      } else if (sound === "sub" || sound === "kick") {
         const start = sound === "kick" ? 100 : 27;
         phase += 2 * Math.PI * (base + start * Math.exp(-t * 40)) / rate;
         const tone = Math.sin(phase) + (sound === "sub" ? .14 * Math.sin(2 * phase) : 0);
@@ -94,7 +99,7 @@ export class AudioEngine {
     }
   }
 
-  hit(sound, note, level, when, speed = 1) {
+  hit(sound, note, level, when, speed = 1, gateSeconds = null) {
     if (!this.context || this.sources.size >= 64 || level <= 0) return;
     const source = this.context.createBufferSource();
     const percussion = ["snare", "clap", "hat", "openhat", "rim"].includes(sound);
@@ -102,9 +107,15 @@ export class AudioEngine {
     source.playbackRate.value = (percussion ? 2 ** (note / 12) : 1) * speed;
     const gain = this.context.createGain();
     gain.gain.value = level / 100 * .65;
+    if (Number.isFinite(gateSeconds) && gateSeconds > 0) {
+      gain.gain.setValueAtTime(gain.gain.value, when);
+      gain.gain.setValueAtTime(gain.gain.value, when + Math.max(0, gateSeconds - .04));
+      gain.gain.linearRampToValueAtTime(0, when + gateSeconds);
+    }
     source.connect(gain).connect(this.master);
     this.sources.add(source);
     source.onended = () => {this.sources.delete(source); source.disconnect(); gain.disconnect();};
     source.start(when);
+    if (Number.isFinite(gateSeconds) && gateSeconds > 0) source.stop(when + gateSeconds + .01);
   }
 }
