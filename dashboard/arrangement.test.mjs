@@ -166,7 +166,7 @@ test("each action has related audible variants, while steady remains unchanged",
   for(const action of ["read","search","edit","command","test","other","repeat"]) {
     for(const [variation,expected] of [["steady",1],["subtle",2],["evolving",3]]) {
       const config=preset("electronic"),score=new DarkScore(),phrases=new Set();
-      config.engine.intensity=0;Object.assign(config.mappings[action],{variation,bars:1});
+      config.engine.intensity=0;config.engine.bassMode="hold";Object.assign(config.mappings[action],{variation,bars:1});
       for(let pass=0;pass<3;pass++) {
         score.event(action,"A",config);const notes=[];
         for(let i=0;i<16;i++)for(const n of score.next(config).filter(n=>n.bus!=="bass"))notes.push([i,n.note,n.level,n.steps,n.sound]);

@@ -37,10 +37,25 @@
 
   <section class="mixer-panel" aria-labelledby="mixer-label">
     <div class="section-heading"><h2 id="mixer-label">Shape the arrangement</h2><span class="muted">One shared track · all Codex sessions</span></div>
+    <div class="bass-controls">
+      <label for="bass-melody">Bass melody<select id="bass-melody"></select></label>
+      <label for="bass-mode">Melody changes<select id="bass-mode"></select></label>
+    </div>
+    <p id="bass-status" class="tiny" role="status">Bass follows verified work.</p>
     <div id="mixer-controls" class="mixer-controls"></div>
     <p id="parts-status" class="muted" role="status">Parts follow live activity across all Codex sessions</p>
     <p class="tiny">Parts enter together on the next bar. Repeated work builds intensity smoothly; phrases ease out at their endings. A bar is four beats. Melodic pitches stay in the track’s key.</p>
   </section>
+  <details class="inventory-panel" open>
+    <summary>Variation inventory <span class="muted">10 bass melodies · all live action rules</span></summary>
+    <p class="tiny">Bass changes wait for the next complete four-bar phrase. Action variations wait for the next bar and need real activity. These controls do not start playback.</p>
+    <h3>Bass melodies</h3>
+    <ol id="bass-inventory" class="bass-inventory"></ol>
+    <h3>AI action variations</h3>
+    <p class="tiny">Steady uses version 1; Subtle uses 1–2; Evolving uses 1–3. Dimmed versions are outside the selected mode. Evolving also moves a later melodic accent when the pattern allows it. Sparse and held patterns retain their spacing; percussion sounds do not play pitched melodies.</p>
+    <div class="table-scroll"><table class="inventory-table"><thead><tr><th scope="col">ACTION / ROLE</th><th scope="col">SETTING</th><th scope="col">1 · CORE</th><th scope="col">2 · ALTERNATE</th><th scope="col">3 · ALTERNATE</th></tr></thead><tbody id="action-inventory"></tbody></table></div>
+    <p class="tiny">A repeated action also develops the previous part from that session. Unreported action types have no active inventory. Turn endings use the automatic fade or stop.</p>
+  </details>
   <div class="workspace">
     <section class="mapping-panel" aria-labelledby="mapping-label">
       <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted" id="mapping-help">Choose a musical part, instrument and phrase length for each activity. Parts share the bass melody’s key and beat.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>

@@ -1,3 +1,4 @@
+import {BASS_MELODIES, BASS_MODES} from "./phrases.js";
 export const ACTIONS = [
   ["start", "Turn starts", "A new prompt arrives"],
   ["read", "Read a file", "A named read or inspect tool"],
@@ -64,7 +65,7 @@ const partFor = {start:"chords",read:"keys",search:"arpeggio",edit:"chords",comm
 export function preset(name) {
   const config = legacyPreset(name);
   config.version = 2;
-  config.engine = {intensity: 65, mix: {bass: 80, keys: 85, synth: 75, chords: 70, drums: 65}};
+  config.engine = {bassMelody:"original", bassMode:"cycle", intensity: 65, mix: {bass: 80, keys: 85, synth: 75, chords: 70, drums: 65}};
   for (const [id] of ACTIONS) Object.assign(config.mappings[id], {part: partFor[id] || "fill", bars: id === "start" || id === "repeat" ? 1 : 2});
   Object.assign(config.mappings, {
     start: {...rule("strings", "hold", 35), part:"chords", bars:1},
@@ -90,6 +91,10 @@ export function validateConfig(value) {
   if (value.version === 2) {
     if (!number(value.engine?.intensity, 0, 100)) throw new Error("Invalid activity intensity.");
     clean.engine.intensity = value.engine.intensity;
+    if (value.engine.bassMelody !== undefined && !BASS_MELODIES.some(p=>p.id===value.engine.bassMelody)) throw new Error("Unknown bass melody.");
+    if (value.engine.bassMode !== undefined && !Object.hasOwn(BASS_MODES,value.engine.bassMode)) throw new Error("Unknown bass mode.");
+    clean.engine.bassMelody = value.engine.bassMelody ?? "original";
+    clean.engine.bassMode = value.engine.bassMode ?? "cycle";
     for (const id of Object.keys(MIXER)) {
       if (!number(value.engine?.mix?.[id], 0, 100)) throw new Error("Invalid mixer level.");
       clean.engine.mix[id] = value.engine.mix[id];

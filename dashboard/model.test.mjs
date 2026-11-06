@@ -95,13 +95,13 @@ test("recognizes namespaced tools while keeping their repeat identities separate
 
 import {DarkScore, DarkTrack} from "./dark-track.js";
 test("the foundation is bass only and live event bursts are bounded", () => {
-  const score = new DarkScore();
-  const phrase = Array.from({length: 64}, () => score.next());
+  const score = new DarkScore(), held = preset("electronic"); held.engine.bassMode = "hold";
+  const phrase = Array.from({length: 64}, () => score.next(held));
   const notes = phrase.flat();
   assert.ok(notes.every(n => n.sound === "bass" && n.steps > 0));
   assert.ok(new Set(notes.map(n => n.note)).size >= 5);
   assert.ok(notes.some(n => n.steps >= 4));
-  assert.deepEqual(Array.from({length: 64}, () => score.next()), phrase);
+  assert.deepEqual(Array.from({length: 64}, () => score.next(held)), phrase);
   const busy = new DarkScore();
   const cfg = preset("electronic");
   for (let i=0;i<100;i++) busy.event("edit","A",cfg);

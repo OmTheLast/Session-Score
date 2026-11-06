@@ -1,13 +1,7 @@
 import {preset, PARTS} from "./model.js";
 
-// A repeating bass melody in A minor. Real actions supply every other layer.
-// Each tuple is [sixteenth-note onset, semitones above A1, held steps].
-const BASS_PHRASE = [
-  [[0, 0, 5], [6, 3, 2], [8, 7, 3], [12, 5, 2], [14, 3, 2]],
-  [[0, -4, 5], [6, 0, 2], [8, 3, 3], [12, 7, 2], [14, 3, 2]],
-  [[0, 5, 5], [6, 3, 2], [8, 0, 3], [12, -2, 4]],
-  [[0, -5, 5], [6, -1, 2], [8, 2, 3], [12, -1, 2], [14, 0, 2]]
-];
+import {BASS_MELODIES} from "./phrases.js";
+
 const DEFAULT = preset("electronic");
 const CHORDS = [[0,3,7], [0,3,8], [0,5,8], [-1,2,7]]; // Shared tones keep chord changes close.
 const PERCUSSION = new Set(["kick", "snare", "clap", "hat", "openhat", "rim"]);
@@ -22,6 +16,15 @@ function inKey(note, bar) {
 
 export class DarkScore {
   constructor() { this.step = 0; this.parts = new Map(); this.variants = new Map(); }
+  selectBass(config) {
+    const cycle = Math.floor(this.step / 64);
+    if (this.bassCycle === cycle) return;
+    const selected = config.engine.bassMelody || "original", mode = config.engine.bassMode || "cycle";
+    const index = Math.max(0,BASS_MELODIES.findIndex(p=>p.id===selected));
+    if (this.bassCycle === undefined || selected !== this.bassSelection || mode !== this.bassMode) this.bassIndex = index;
+    else if (mode === "cycle") this.bassIndex = (this.bassIndex + cycle - this.bassCycle) % BASS_MELODIES.length;
+    this.bassSelection = selected; this.bassMode = mode; this.bassCycle = cycle;
+  }
   queueVariation(part, config) {
     const boundary = Math.ceil(this.step / 16) * 16;
     if (part.variationBar === boundary) return;
@@ -94,6 +97,8 @@ export class DarkScore {
   }
   next(config = DEFAULT) {
     const step = this.step, position = step % 16, bar = Math.floor(step/16)%4;
+    this.selectBass(config);
+    const bassBar = BASS_MELODIES[this.bassIndex].bars[bar];
     const chord = CHORDS[bar], notes = [];
     for (const part of this.parts.values()) {
       if (position === 0) {
@@ -107,14 +112,14 @@ export class DarkScore {
     }
     const groups = this.groups(config);
     const hasMelody = groups.some(g => ["keys","arpeggio"].includes(g.mapping.part));
-    const bassPitch = BASS_PHRASE[bar].filter(([onset]) => onset <= position).at(-1)[1];
+    const bassPitch = bassBar.filter(([onset]) => onset <= position).at(-1)[1];
     const add = (sound, note, level, steps, bus, envelope = {}) => {
       const volume = config.engine.mix[bus] / 100;
       if (volume <= 0 || level <= 0) return;
       notes.push({sound, note:PERCUSSION.has(sound) || bus === "bass" ? note : inKey(note,bar),
         level:Math.min(80,level * volume),steps,bus,...envelope});
     };
-    const bass = BASS_PHRASE[bar].find(([onset]) => onset === position);
+    const bass = bassBar.find(([onset]) => onset === position);
     if (bass) add("bass",bass[1],position===0 ? 68 : 56,bass[2],"bass");
     for (const {part, mapping:m, energy} of groups) {
       const dense = Math.min(3, 1 + (energy-1) * config.engine.intensity/100);
@@ -173,6 +178,12 @@ export class DarkTrack {
   event(action, session = "local") { if (this.timer) this.score.event(action, session, this.getConfig()); }
   retainSessions(ids) { this.score?.retainSessions(ids); }
   summary() { return this.score?.summary(this.getConfig()) || []; }
+  bassStatus() {
+    if (!this.score || this.score.bassIndex === undefined) return null;
+    const settings = this.getConfig().engine;
+    return {melody:BASS_MELODIES[this.score.bassIndex],
+      pending:settings.bassMelody !== this.score.bassSelection || settings.bassMode !== this.score.bassMode};
+  }
   schedule() {
     if (!this.score) return;
     const now = this.audio.context.currentTime;

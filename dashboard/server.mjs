@@ -7,6 +7,7 @@ const upstreamPort = Number(process.env.TURBELLA_PORT || 7377);
 const files = new Map([
   ["/", ["index.html", "text/html"]],
   ["/app.js", ["app.js", "text/javascript"]],
+  ["/phrases.js", ["phrases.js", "text/javascript"]],
   ["/model.js", ["model.js", "text/javascript"]],
   ["/audio.js", ["audio.js", "text/javascript"]],
   ["/dark-track.js", ["dark-track.js", "text/javascript"]],

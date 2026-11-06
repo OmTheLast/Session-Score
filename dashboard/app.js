@@ -1,3 +1,4 @@
+import {BASS_MELODIES, BASS_MODES, actionInventory} from "./phrases.js";
 import {ACTIONS, SOUNDS, PATTERNS, PARTS, VARIATIONS, MIXER, SessionClassifiers, preset, validateConfig} from "./model.js";
 import {AudioEngine} from "./audio.js";
 import {DarkTrack} from "./dark-track.js";
@@ -32,6 +33,7 @@ function toast(message) {
   toastTimer = setTimeout(() => $("toast").classList.remove("show"), 3800);
 }
 function save() {
+  renderInventory();
   try {
     localStorage.setItem("session-score-studio", JSON.stringify({selected, configs}));
     storageAvailable = true;
@@ -143,11 +145,46 @@ function options(values, chosen) {
   });
 }
 function updateParts() {
+  const bass = track.bassStatus();
+  const chosen = BASS_MELODIES.find(p=>p.id===config().engine.bassMelody);
+  $("bass-status").textContent = bass
+    ? `Playing: ${bass.melody.name}` + (bass.pending ? ` · ${chosen.name} / ${BASS_MODES[config().engine.bassMode]} queued for the next four-bar phrase` : config().engine.bassMode === "cycle" ? " · rotates after four bars" : " · held melody")
+    : `Ready: ${chosen.name} · ${BASS_MODES[config().engine.bassMode]} · silent until verified work`;
   const parts = track.summary();
   $("parts-status").textContent = parts.length ? parts.map(p => {
     const action = ACTIONS.find(([id]) => id === p.action)?.[1] || p.action;
     return `${p.label} · ${action} · ${p.sessions} session${p.sessions === 1 ? "" : "s"} · ${p.waiting ? "starts next bar" : `${p.barsLeft} bar${p.barsLeft === 1 ? "" : "s"} left`}`;
   }).join(" / ") : live.state === "working" ? "Bass melody active · waiting for fresh actions to add parts" : "Parts follow live activity across all Codex sessions";
+}
+function renderInventory() {
+  $("action-inventory").replaceChildren();
+  for (const item of actionInventory(config(),ACTIONS,PARTS)) {
+    const row = document.createElement("tr");
+    const label = document.createElement("td");
+    const strong = document.createElement("strong"); strong.textContent = item.label;
+    const role = document.createElement("small"); role.textContent = item.role;
+    label.append(strong,role); row.append(label);
+    const mode = document.createElement("td"); mode.textContent = `${VARIATIONS[item.mode]}${item.enabled ? "" : " · muted"}`; row.append(mode);
+    item.variants.forEach((description,index)=>{
+      const cell = document.createElement("td"); cell.textContent = description;
+      cell.classList.toggle("inactive-variant", !item.enabled || index >= item.count);
+      row.append(cell);
+    });
+    $("action-inventory").append(row);
+  }
+}
+function renderBass() {
+  $("bass-melody").replaceChildren(...options(Object.fromEntries(BASS_MELODIES.map(p=>[p.id,p.name])),config().engine.bassMelody));
+  $("bass-mode").replaceChildren(...options(BASS_MODES,config().engine.bassMode));
+  $("bass-inventory").replaceChildren();
+  for (const melody of BASS_MELODIES) {
+    const item = document.createElement("li"), title = document.createElement("strong"), description = document.createElement("span");
+    title.textContent = melody.name; description.textContent = melody.description;
+    item.append(title,description); $("bass-inventory").append(item);
+  }
+}
+for (const [id,field] of [["bass-melody","bassMelody"],["bass-mode","bassMode"]]) {
+  $(id).addEventListener("change",()=>{config().engine[field]=$(id).value;save();updateParts();});
 }
 function renderMixer() {
   $("mixer-controls").replaceChildren();
@@ -169,7 +206,7 @@ function renderMixer() {
   }
 }
 function render() {
-  renderMixer();
+  renderMixer(); renderBass(); renderInventory(); updateParts();
   for (const button of document.querySelectorAll("[data-preset]")) button.setAttribute("aria-pressed", String(button.dataset.preset === selected));
   $("tempo").value = config().bpm;
   $("master").value = config().master;
