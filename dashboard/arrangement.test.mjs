@@ -13,7 +13,7 @@ test("real actions create distinct sustained musical parts and expire without fr
     assert.ok(notes.length>=4,action);
     signatures.add(JSON.stringify(notes.map(n=>[n.sound,n.note,n.steps,n.bus])));
     assert.ok(notes.every(n=>Number.isFinite(n.level) && n.level>0 && n.steps>0));
-    bars(score,config,4);
+    bars(score,config,config.mappings[action].bars);
     assert.ok(bars(score,config,1).every(n=>n.bus==="bass"));
   }
   assert.equal(signatures.size,5);
@@ -63,7 +63,7 @@ test("legacy default mappings upgrade while customized settings survive",()=>{
   Object.assign(old.mappings.edit,{sound:"sub",pattern:"double",level:75,note:0,enabled:true});
   old.mappings.search.sound="piano";old.mappings.search.level=21;old.mappings.command.enabled=false;
   const migrated=validateConfig(old);
-  assert.equal(migrated.version,2);
+  assert.equal(migrated.version,3);
   assert.equal(migrated.mappings.read.sound,"piano");
   assert.equal(migrated.mappings.edit.sound,"strings");
   assert.equal(migrated.mappings.search.sound,"piano");
@@ -191,9 +191,40 @@ test("variation stays fixed within a bar and bursts queue only one change",()=>{
   score.retainSessions(new Set());assert.equal(score.variants.size,0);
 });
 
-test("variation settings round-trip and older version-two files gain subtle defaults",()=>{
+test("variation settings round-trip and missing variation fields gain subtle defaults",()=>{
   const config=preset("electronic");config.mappings.read.variation="evolving";config.mappings.edit.variation="steady";
   assert.deepEqual(validateConfig(JSON.parse(JSON.stringify(config))),config);
   delete config.mappings.read.variation;assert.equal(validateConfig(config).mappings.read.variation,"subtle");
   config.mappings.read.variation="random";assert.throws(()=>validateConfig(config),/variation/);
+});
+
+test("saved action lengths double exactly once and preserve all other settings",()=>{
+  for(const name of ["classical","electronic","hyperpop"]){
+    const old=preset(name);old.version=2;
+    for(const rule of Object.values(old.mappings))rule.bars/=2;
+    old.mappings.read.bars=1;old.mappings.command.bars=2;
+    old.mappings.search.sound="strings";old.engine.bassMelody="undertow";old.master=33;
+    const upgraded=validateConfig(old);
+    assert.equal(upgraded.version,3);
+    for(const [id,rule] of Object.entries(old.mappings))assert.deepEqual(upgraded.mappings[id],{...rule,bars:rule.bars*2});
+    assert.deepEqual(upgraded.engine,old.engine);assert.equal(upgraded.master,33);
+    assert.deepEqual(validateConfig(JSON.parse(JSON.stringify(upgraded))),upgraded);
+    upgraded.mappings.edit.bars=1;assert.equal(validateConfig(upgraded).mappings.edit.bars,1);
+    upgraded.mappings.edit.bars=16;assert.throws(()=>validateConfig(upgraded),/phrase length/);
+  }
+});
+
+test("longer action parts stay active for their full duration and renew on the bar grid",()=>{
+  const config=preset("electronic");
+  const lengths={start:2,read:4,search:4,edit:8,command:8,test:4,other:4,repeat:2};
+  for(const [action,length] of Object.entries(lengths)){
+    assert.equal(config.mappings[action].bars,length);
+    const score=new DarkScore();score.step=3;score.event(action,"A",config);
+    const key="A:"+action;assert.equal(score.parts.get(key).expires,16+length*16);
+    while(score.step<16+length*16)score.next(config);
+    assert.equal(score.parts.get(key).expires,score.step);
+    assert.ok(score.next(config).every(n=>n.bus==="bass"),action+' expires without new work');
+    score.event(action,"A",config);
+    assert.equal(score.parts.get(key).expires,Math.ceil(score.step/16)*16+length*16);
+  }
 });

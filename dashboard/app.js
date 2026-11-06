@@ -16,6 +16,7 @@ try {
     const restored = Object.fromEntries(Object.keys(configs).map(name => [name, validateConfig(saved.configs[name])]));
     configs = restored;
     if (Object.hasOwn(configs, saved.selected)) selected = saved.selected;
+    localStorage.setItem("session-score-studio", JSON.stringify({selected, configs}));
   }
 } catch { storageAvailable = false; }
 const config = () => configs[selected];
@@ -238,7 +239,7 @@ function render() {
     const barsCell = document.createElement("td");
     const bars = document.createElement("select");
     bars.setAttribute("aria-label",label + " phrase length");
-    bars.append(...options({1:"1 bar",2:"2 bars",4:"4 bars"},String(mapping.bars)));
+    bars.append(...options({1:"1 bar",2:"2 bars",4:"4 bars",8:"8 bars"},String(mapping.bars)));
     bars.addEventListener("change", () => { mapping.bars=Number(bars.value);save(); });
     barsCell.append(bars); row.append(barsCell);
     const pitchCell = document.createElement("td");
