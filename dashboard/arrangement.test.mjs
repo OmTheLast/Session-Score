@@ -28,7 +28,7 @@ test("session contributions persist independently, mute works, and repeat varies
   score.retainSessions(new Set(["B"]));
   assert.deepEqual([...score.parts.values()].map(p=>p.session),["B"]);
   score.event("repeat","B",config);
-  assert.equal([...score.parts.values()].find(p=>p.action==="edit").variant,1);
+  assert.equal([...score.parts.values()].find(p=>p.action==="edit").nextVariant,1);
   config.mappings.edit.enabled=false;
   assert.ok(!bars(score,config).some(n=>n.bus==="chords"));
   config.engine.mix.bass=0;config.engine.mix.drums=0;
@@ -89,4 +89,60 @@ test("track stop clears musical memory and audio gate cancels every queued sourc
   engine.sources.add({scoreBus:"bass",stop(){stopped++;}});
   engine.stopBus("keys");assert.equal(stopped,1);assert.equal(engine.sources.size,1);
   engine.stop();assert.equal(stopped,2);assert.equal(engine.sources.size,0);
+});
+
+
+test("off-grid activity waits for the bar and uses shared even subdivisions",()=>{
+  const config=preset("electronic"),score=new DarkScore();
+  for(let i=0;i<5;i++)score.next(config);
+  for(const action of ["read","search","edit","command"])score.event(action,"A",config);
+  assert.ok(score.summary(config).every(p=>p.waiting));
+  for(let step=5;step<16;step++)assert.ok(score.next(config).every(n=>n.bus==="bass"));
+  const first=score.next(config);
+  assert.ok(first.some(n=>n.bus==="chords"));
+  for(let step=17;step<32;step++) {
+    const notes=score.next(config);
+    if(step%2)assert.equal(notes.length,0,"No late-sixteenth accents");
+  }
+});
+test("renewal smooths intensity and repeat variations wait for the next bar",()=>{
+  const config=preset("electronic"),score=new DarkScore();
+  config.mappings.read.bars=1;score.event("read","A",config);
+  for(let i=0;i<13;i++)score.next(config);
+  const part=score.parts.get("A:read"),gain=part.gain;
+  score.event("read","A",config);score.event("repeat","A",config);
+  assert.equal(part.variant,0);
+  const renewed=score.parts.get("A:read");
+  score.next(config);assert.ok(renewed.gain-gain <= .150001);
+  while(score.step<16)score.next(config);
+  assert.equal(renewed.variant,0);
+  score.next(config);assert.equal(renewed.variant,1);
+});
+test("late callbacks preserve the musical grid; tempo changes on the next bar",t=>{
+  const config=preset("electronic"),calls=[];
+  const audio={context:{currentTime:1},hit(...args){calls.push(args);},stop(){}};
+  const track=new DarkTrack(audio,()=>config);t.after(()=>track.stop());track.start();
+  for(let tick=1;tick<180;tick++) {
+    audio.context.currentTime=1+tick*.025;
+    if(tick===24)config.bpm=90;
+    // Deliberately miss callbacks; every actual note must remain on the original grid.
+    if(tick>10 && tick<19 || tick>70 && tick<80)continue;
+    track.schedule();
+  }
+  assert.ok(calls.length>5);
+  for(const call of calls) {
+    const at=call[3], beat=at<3.06-1e-8 ? .125 : 60/90/4;
+    const origin=at<3.06-1e-8 ? 1.06 : 3.06;
+    assert.ok(Math.abs((at-origin)/beat-Math.round((at-origin)/beat))<1e-7,`off grid: ${at}`);
+  }
+});
+test("tonal envelopes ramp in and out while preserving the scheduled onset",()=>{
+  const engine=new AudioEngine(),automation=[],starts=[],stops=[];
+  const param={value:0,setValueAtTime(v,t){automation.push(["set",v,t]);},linearRampToValueAtTime(v,t){automation.push(["ramp",v,t]);}};
+  engine.context={createBufferSource(){return{playbackRate:{value:1},connect(n){return n;},start(t){starts.push(t);},stop(t){stops.push(t);}};},
+    createGain(){return{gain:param,connect(){},disconnect(){}};}};
+  engine.buffer=()=>({});engine.master={};
+  engine.hit("strings",0,50,10,1,2,"chords",{attack:.25,release:.5});
+  assert.deepEqual(starts,[10]);assert.deepEqual(stops,[12.01]);
+  assert.deepEqual(automation,[["set",0,10],["ramp",.325,10.25],["set",.325,11.5],["ramp",0,12]]);
 });

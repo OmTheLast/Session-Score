@@ -114,7 +114,7 @@ test("clock scheduling uses musical time and drops a delayed-tab backlog", () =>
   const audio = {context: {currentTime: 1}, hit: (...args) => calls.push(args)};
   const track = new DarkTrack(audio, () => preset("electronic"));
   track.score = new DarkScore();
-  track.at = .95;
+  track.at = 1.03;
   track.schedule();
   assert.ok(calls.length > 0 && calls.length < 15);
   assert.ok(calls.every(c => c[3] >= 1));

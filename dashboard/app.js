@@ -146,7 +146,7 @@ function updateParts() {
   const parts = track.summary();
   $("parts-status").textContent = parts.length ? parts.map(p => {
     const action = ACTIONS.find(([id]) => id === p.action)?.[1] || p.action;
-    return `${p.label} · ${action} · ${p.sessions} session${p.sessions === 1 ? "" : "s"} · ${p.barsLeft} bar${p.barsLeft === 1 ? "" : "s"} left`;
+    return `${p.label} · ${action} · ${p.sessions} session${p.sessions === 1 ? "" : "s"} · ${p.waiting ? "starts next bar" : `${p.barsLeft} bar${p.barsLeft === 1 ? "" : "s"} left`}`;
   }).join(" / ") : live.state === "working" ? "Bass melody active · waiting for fresh actions to add parts" : "Parts follow live activity across all Codex sessions";
 }
 function renderMixer() {

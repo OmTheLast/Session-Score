@@ -40,7 +40,7 @@ export class AudioEngine {
     const key = sound + semitones;
     if (this.buffers.has(key)) return this.buffers.get(key);
     const rate = this.context.sampleRate;
-    const duration = {bass: 2.6, sub: 1.3, kick: .55, snare: .28, clap: .27, hat: .09, openhat: .42, rim: .12, piano: 1.8, strings: 3.5, lead: .9}[sound];
+    const duration = {bass: 2.6, sub: 1.3, kick: .55, snare: .28, clap: .27, hat: .09, openhat: .42, rim: .12, piano: 1.8, strings: 5, lead: .9}[sound];
     const buffer = this.context.createBuffer(1, Math.ceil(rate * duration), rate);
     const data = buffer.getChannelData(0);
     const base = 55 * 2 ** (semitones / 12);
@@ -105,18 +105,23 @@ export class AudioEngine {
     }
   }
 
-  hit(sound, note, level, when, speed = 1, gateSeconds = null, bus = "effects") {
+  hit(sound, note, level, when, speed = 1, gateSeconds = null, bus = "effects", envelope = {}) {
     if (!this.context || this.sources.size >= 64 || level <= 0) return;
     const source = this.context.createBufferSource();
     const percussion = ["snare", "clap", "hat", "openhat", "rim"].includes(sound);
     source.buffer = this.buffer(sound, percussion ? 0 : note);
     source.playbackRate.value = (percussion ? 2 ** (note / 12) : 1) * speed;
     const gain = this.context.createGain();
-    gain.gain.value = level / 100 * .65;
+    const amplitude = level / 100 * .65;
+    gain.gain.value = amplitude;
     if (Number.isFinite(gateSeconds) && gateSeconds > 0) {
-      gain.gain.setValueAtTime(gain.gain.value, when);
-      gain.gain.setValueAtTime(gain.gain.value, when + Math.max(0, gateSeconds - .04));
-      gain.gain.linearRampToValueAtTime(0, when + gateSeconds);
+      const tonal = !["snare","clap","hat","openhat","rim","kick"].includes(sound);
+      const attack = Math.min(gateSeconds*.4, envelope.attack ?? (tonal ? .018 : .002));
+      const release = Math.min(gateSeconds-attack, envelope.release ?? (tonal ? .12 : .025));
+      gain.gain.setValueAtTime(0, when);
+      gain.gain.linearRampToValueAtTime(amplitude, when+attack);
+      gain.gain.setValueAtTime(amplitude, when+gateSeconds-release);
+      gain.gain.linearRampToValueAtTime(0, when+gateSeconds);
     }
     source.scoreBus = bus;
     let pan;
