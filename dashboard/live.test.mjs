@@ -1,10 +1,10 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {mkdtemp, mkdir, writeFile, appendFile, rm} from "node:fs/promises";
+import {mkdtemp, mkdir, writeFile, appendFile, rm, stat} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {spawn} from "node:child_process";
-import {TurnState, SessionReader, STALE_MS} from "./codex-feed.mjs";
+import {TurnState, SessionReader, SessionGroup, STALE_MS} from "./codex-feed.mjs";
 import {LiveSession} from "./live-session.js";
 
 const record = (type, payload) => ({timestamp: new Date().toISOString(), type, payload});
@@ -95,7 +95,7 @@ test("real HTTP feed reconstructs state, skips history, and follows start/tool/e
       child.on("error", reject);
     });
     const status = await (await fetch(url + "/api/status")).json();
-    assert.equal(status.preferredSession, session);
+    assert.equal(status.preferredSession, "all");
     assert.equal(status.sessions[0].session, session);
     assert.equal((await fetch(url+"/api/events?session=../../secret")).status, 400);
     const feed = await fetch(url + "/api/events?session=" + session, {signal:controller.signal});
@@ -136,5 +136,89 @@ test("real HTTP feed reconstructs state, skips history, and follows start/tool/e
     assert.ok(first.includes('"state":"idle"'));
     assert.ok(!first.includes("event: action"));
     await again.cancel();
+    const allFeed = await fetch(url + "/api/events");
+    const allReader = allFeed.body.getReader();
+    async function allUntil(check) {
+      const deadline = Date.now()+5000;
+      while (Date.now()<deadline) {
+        const chunk = await allReader.read();
+        if (chunk.done) throw new Error("All-session feed closed");
+        const body = new TextDecoder().decode(chunk.value);
+        if (check(body)) return body;
+      }
+      throw new Error("Expected all-session update missing");
+    }
+    await allUntil(t => t.includes('"session":"all"') && t.includes('"state":"idle"'));
+    const another = "22222222-2222-2222-2222-222222222222";
+    const anotherPath = join(folder, `rollout-test-${another}.jsonl`);
+    await writeFile(anotherPath,line(lifecycle("task_started")));
+    await allUntil(t => t.includes('"activeSessions":["'+another+'"]'));
+    await appendFile(anotherPath,line(record("response_item", {type:"function_call",name:"read_file",call_id:"live"})));
+    const action = await allUntil(t => t.includes('"tool":"read_file"'));
+    assert.ok(action.includes('"session":"'+another+'"'));
+    await appendFile(anotherPath,line(lifecycle("task_complete")));
+    await allUntil(t => t.includes('"activeCount":0') && t.includes('"state":"idle"'));
+    await allReader.cancel();
+    const viz = await fetch(url + "/api/visualizer?session=all",{redirect:"manual"});
+    assert.equal(new URL(viz.headers.get("location")).searchParams.has("session"),false);
+
   } finally {controller.abort(); child?.kill(); await rm(dir,{recursive:true,force:true});}
+});
+
+
+test("all-session reader discovers new chats, preserves overlap, and skips history on reconnect", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "score-group-"));
+  const files = new Map();
+  const list = async () => Promise.all([...files].map(async ([session, path]) => ({session, path, last:(await stat(path)).mtimeMs})));
+  async function add(id, records) {
+    const path = join(dir, id + ".jsonl");
+    await writeFile(path, records.map(line).join("")); files.set(id, path);
+  }
+  try {
+    await add("A", [lifecycle("task_started"), record("response_item",{type:"function_call",name:"historical",call_id:"old"})]);
+    const group = new SessionGroup({list});
+    let snapshot = await group.read();
+    assert.deepEqual(snapshot.activeSessions, ["A"]);
+    assert.equal(snapshot.events.length, 0);
+    await add("B", [lifecycle("task_started")]);
+    snapshot = await group.read();
+    assert.deepEqual(snapshot.activeSessions.sort(), ["A","B"]);
+    assert.ok(snapshot.events.some(e => e.session === "B" && e.kind === "turn"));
+    await appendFile(files.get("A"), line(lifecycle("task_complete")));
+    await appendFile(files.get("B"), line(record("response_item",{type:"function_call",name:"apply_patch",arguments:"private",call_id:"b"})));
+    snapshot = await group.read();
+    assert.equal(snapshot.state, "working");
+    assert.deepEqual(snapshot.activeSessions, ["B"]);
+    assert.equal(snapshot.events.find(e => e.tool === "apply_patch").session, "B");
+    assert.ok(!JSON.stringify(snapshot).includes("private"));
+    const reconnect = new SessionGroup({list});
+    snapshot = await reconnect.read();
+    assert.equal(snapshot.state, "working");
+    assert.equal(snapshot.events.length, 0);
+    await appendFile(files.get("B"), line(lifecycle("turn_aborted")));
+    snapshot = await group.read();
+    assert.equal(snapshot.state, "idle");
+    assert.equal(snapshot.activeCount, 0);
+    // A previously finished session can resume without reconnecting the group.
+    await appendFile(files.get("A"), line(lifecycle("task_started", "new-turn")));
+    assert.deepEqual((await group.read()).activeSessions, ["A"]);
+  } finally { await rm(dir,{recursive:true,force:true}); }
+});
+
+test("all-session audio accepts active sources and stops only after the last one ends", () => {
+  let playing = false;
+  const live = new LiveSession({audio:{context:{state:"running"},stop(){}},
+    track:{start(){playing=true;},stop(){playing=false;}}});
+  live.connect("all");
+  live.receive({session:"all",state:"working",activeSessions:["A","B"]});
+  assert.equal(playing,true);
+  assert.equal(live.action({session:"A"}),true);
+  assert.equal(live.action({session:"B"}),true);
+  live.receive({session:"all",state:"working",activeSessions:["B"]});
+  assert.equal(playing,true);
+  assert.equal(live.action({session:"A"}),false);
+  assert.equal(live.action({session:"B"}),true);
+  live.receive({session:"all",state:"idle",activeSessions:[]});
+  assert.equal(playing,false);
+  assert.equal(live.action({session:"B"}),false);
 });

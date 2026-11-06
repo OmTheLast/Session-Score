@@ -37,7 +37,7 @@
 
   <div class="workspace">
     <section class="mapping-panel" aria-labelledby="mapping-label">
-      <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted" id="mapping-help">Real actions add these sounds over the bass. Sounds share the same beat. End events stop all sound.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
+      <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted" id="mapping-help">Real actions add these sounds over the bass. Sounds share the same beat. The last session ending stops all sound.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
       <div class="table-scroll"><table><thead><tr><th scope="col">AI ACTION</th><th scope="col">SOUND</th><th scope="col">PATTERN</th><th scope="col">PITCH</th><th scope="col">LEVEL</th><th scope="col"><span class="sr-only">Controls</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
       <div class="mapping-footer"><span id="mapping-count">8 live sound rules · automatic stop</span><div><button class="text-button" id="import">Import settings</button><button class="text-button" id="export">Export settings ↗</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
       <p class="mapping-note">Tool names decide the action. Shell commands share one sound, including tests. A repeat means the same input appeared again.</p>
@@ -45,18 +45,17 @@
 
     <aside>
       <section class="side-panel live-panel" aria-labelledby="live-label">
-        <div class="section-heading"><h2 id="live-label">Live from Codex</h2><span class="connection-dot" id="connection-dot"></span></div>
+        <div class="section-heading"><h2 id="live-label">All Codex sessions</h2><span class="connection-dot" id="connection-dot"></span></div>
         <p class="muted" id="connection-status">Looking for Codex sessions on this Mac…</p>
-        <label class="sr-only" for="sessions">Agent session</label>
-        <select id="sessions"><option value="">Choose a session</option></select>
-        <div class="connection-actions"><label class="link-switch"><input type="checkbox" id="codex-link" role="switch"><span class="switch-track"></span><strong>Link Codex</strong></label><button id="refresh" class="text-button">Refresh ↻</button></div>
+        <p class="tiny">All sessions on this Mac · new sessions join automatically</p>
+        <div class="connection-actions"><label class="link-switch"><input type="checkbox" id="codex-link" role="switch"><span class="switch-track"></span><strong>Link all Codex</strong></label><button id="refresh" class="text-button">Refresh ↻</button></div>
         <p id="link-state" class="tiny" role="status">OFF · sound is stopped</p>
         <div class="visualizer-window">
-          <p id="visualizer-empty">Turbella visuals appear while<br>the selected Codex session works.</p>
-          <iframe id="turbella-view" title="Turbella visualizer for the connected agent session" hidden></iframe>
+          <p id="visualizer-empty">Turbella visuals appear while<br>any Codex session works.</p>
+          <iframe id="turbella-view" title="Turbella visualizer for all sessions" hidden></iframe>
         </div>
-        <div class="visualizer-caption"><span id="visualizer-label">Music + visuals · same session</span><a id="visualizer-open" hidden target="_blank" rel="noreferrer">Open larger ↗</a></div>
-        <p class="tiny">Link Codex enables audio for this session. Bass starts during work. Real actions add your sounds. Finishing or cancelling stops playback. Disconnect audio silences this page; it does not stop Codex.</p>
+        <div class="visualizer-caption"><span id="visualizer-label">All-session visuals</span><a id="visualizer-open" hidden target="_blank" rel="noreferrer">Open larger ↗</a></div>
+        <p class="tiny">Link all Codex enables one soundtrack for every local Codex session. Bass plays while any session works. Each session adds its action sounds. Playback stops when the last working session finishes or is cancelled. Disconnect audio silences this page; it does not stop Codex.</p>
       </section>
 
       <section class="side-panel activity-panel" aria-labelledby="activity-label"><div class="section-heading"><h2 id="activity-label">Activity</h2><span id="activity-mode" class="tag">IDLE</span></div><canvas id="meter" width="540" height="80" aria-label="Audio output meter"></canvas><ol id="activity"><li class="empty-activity">Your next action starts here.</li></ol></section>

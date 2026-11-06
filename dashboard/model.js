@@ -101,3 +101,14 @@ export class Classifier {
     return Object.entries(FAMILIES).find(([,names]) => names.includes(tool))?.[0] ?? "other";
   }
 }
+
+// Repeat detection belongs to the originating session, even when events interleave.
+export class SessionClassifiers {
+  constructor() { this.sessions = new Map(); }
+  reset() { this.sessions.clear(); }
+  retain(ids) { for (const id of this.sessions.keys()) if (!ids.has(id)) this.sessions.delete(id); }
+  classify(event) {
+    if (!this.sessions.has(event.session)) this.sessions.set(event.session, new Classifier());
+    return this.sessions.get(event.session).classify(event);
+  }
+}

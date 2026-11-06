@@ -77,7 +77,7 @@ export class SessionReader {
 
 let inventory = [], refreshed = 0;
 export async function sessions() {
-  if (Date.now() - refreshed < 5000) return inventory;
+  if (Date.now() - refreshed < 1500) return inventory;
   const found = [];
   async function walk(dir, depth = 0) {
     for (const entry of await readdir(dir, {withFileTypes: true})) {
@@ -96,19 +96,56 @@ export async function sessions() {
   return inventory;
 }
 
+// All sessions share one soundtrack; each retains its own lifecycle and event identity.
+export class SessionGroup {
+  constructor({list = sessions, now = Date.now} = {}) {
+    this.list = list; this.now = now; this.readers = new Map(); this.startedAt = now(); this.initial = true;
+  }
+  async read() {
+    const entries = await this.list();
+    const present = new Set(entries.map(entry => entry.session));
+    for (const id of this.readers.keys()) if (!present.has(id)) this.readers.delete(id);
+    for (const entry of entries) {
+      if (this.now() - entry.last <= STALE_MS && !this.readers.has(entry.session)) {
+        this.readers.set(entry.session, new SessionReader(entry.path));
+      }
+    }
+    const updates = await Promise.all([...this.readers].map(async ([session, reader]) => {
+      try { return {session, ...await reader.read()}; }
+      catch { return {session, state: "unknown", events: [], reason: "Session log unreadable."}; }
+    }));
+    const activeSessions = updates.filter(s => s.state === "working").map(s => s.session);
+    const uncertain = updates.filter(s => s.state === "unknown");
+    const events = this.initial ? [] : updates.filter(s => s.state === "working")
+      .flatMap(s => s.events.filter(e => e.kind !== "stop" && e.ts >= this.startedAt && this.now() - e.ts < 2000)
+        .map(e => ({...e, session: s.session}))).sort((a,b) => a.ts - b.ts);
+    this.initial = false;
+    // Retain quiet open turns so they can report uncertainty and recover on new records.
+    for (const s of updates) {
+      if ((s.state === "idle" || s.state === "cancelled") && this.now() - s.lastRecord > STALE_MS) this.readers.delete(s.session);
+    }
+    return {events, state: activeSessions.length ? "working" : uncertain.length ? "unknown" : "idle",
+      activeSessions, activeCount: activeSessions.length, uncertainCount: uncertain.length,
+      reason: uncertain.length ? `${uncertain.length} session(s) have no reliable current state.` : ""};
+  }
+}
+
 export async function followSession(session, res) {
-  const entry = (await sessions()).find(s => s.session === session);
-  if (!entry) { res.writeHead(404).end("Codex session log not found."); return; }
-  const reader = new SessionReader(entry.path);
+  let reader;
+  if (session === "all") reader = new SessionGroup();
+  else {
+    const entry = (await sessions()).find(s => s.session === session);
+    if (!entry) { res.writeHead(404).end("Codex session log not found."); return; }
+    reader = new SessionReader(entry.path);
+  }
   // Reconstruct current state, never audition the historical events.
   const initial = await reader.read();
   if (res.destroyed) return;
   res.writeHead(200, {"Content-Type": "text/event-stream", "Cache-Control": "no-store", "X-Accel-Buffering": "no"});
   const send = (type, data) => {
     if (res.destroyed) return;
-    // A stalled client must reconnect, rather than play a buffered session later.
     if (res.writableLength > 65536) { res.end(); return; }
-    res.write(`event: ${type}\ndata: ${JSON.stringify({...data, session, observedAt: Date.now()})}\n\n`);
+    res.write(`event: ${type}\ndata: ${JSON.stringify({session, ...data, observedAt: Date.now()})}\n\n`);
   };
   const state = value => { const {events, ...snapshot} = value; send("state", snapshot); };
   state(initial);
@@ -119,13 +156,12 @@ export async function followSession(session, res) {
     try {
       const update = await reader.read();
       if (res.destroyed) return;
-      // State is delivered first: a finish in this batch cancels every pending note.
       state(update);
       if (update.state === "working") {
         for (const event of update.events) if (event.kind !== "stop") send("action", event);
       }
     } catch {
-      send("state", {state: "unknown", reason: "Cannot read the selected Codex session. Sound paused."});
+      send("state", {state: "unknown", activeSessions: [], activeCount: 0, reason: "Cannot read Codex sessions. Sound paused."});
     } finally { busy = false; }
   }, 300);
   res.on("close", () => clearInterval(timer));

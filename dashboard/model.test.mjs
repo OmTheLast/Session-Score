@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {Classifier, preset, validateConfig, ACTIONS} from "./model.js";
+import {Classifier, SessionClassifiers, preset, validateConfig, ACTIONS} from "./model.js";
 import {AudioEngine} from "./audio.js";
 
 const DEMO = [
@@ -139,4 +139,15 @@ test("older saved presets acquire an arrangement and new files retain it", () =>
   assert.equal(validateConfig(p).arrangement, "dark");
   p.arrangement = "actions";
   assert.equal(validateConfig(p).arrangement, "actions");
+});
+
+test("interleaved sessions retain independent repeat histories", () => {
+  const classifier = new SessionClassifiers();
+  const action = {kind:"tool",status:"waiting",tool:"exec_command",sig:"same"};
+  assert.equal(classifier.classify({...action,session:"A"}),"command");
+  assert.equal(classifier.classify({...action,session:"B"}),"command");
+  assert.equal(classifier.classify({...action,session:"A"}),"repeat");
+  assert.equal(classifier.classify({...action,session:"B"}),"repeat");
+  classifier.retain(new Set(["B"]));
+  assert.equal(classifier.classify({...action,session:"A"}),"command");
 });

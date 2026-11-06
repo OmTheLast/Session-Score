@@ -1,11 +1,11 @@
-import {ACTIONS, SOUNDS, PATTERNS, Classifier, preset, validateConfig} from "./model.js";
+import {ACTIONS, SOUNDS, PATTERNS, SessionClassifiers, preset, validateConfig} from "./model.js";
 import {AudioEngine} from "./audio.js";
 import {DarkTrack} from "./dark-track.js";
 import {LiveSession} from "./live-session.js";
 
 const $ = id => document.getElementById(id);
 const audio = new AudioEngine();
-const classifier = new Classifier();
+const classifier = new SessionClassifiers();
 let configs = Object.fromEntries(["classical", "electronic", "hyperpop"].map(name => [name, preset(name)]));
 let selected = "electronic";
 let storageAvailable = true;
@@ -54,18 +54,19 @@ function log(action, source) {
   list.prepend(item);
   while (list.children.length > 6) list.lastChild.remove();
 }
-const live = new LiveSession({audio, track, onState: ({state, audible, reason, audioBlocked}) => {
+const live = new LiveSession({audio, track, onState: ({state, audible, reason, audioBlocked, activeCount, uncertainCount}) => {
   $("connection-dot").classList.toggle("connected", state !== "unknown");
   $("enable-audio").hidden = !audioBlocked;
+  const working = `${activeCount} Codex session${activeCount === 1 ? "" : "s"} working`;
   const descriptions = {
-    working: audible ? (config().master === 0 ? "Codex working · master volume is zero" : "Codex working · bass melody + live actions") : "Codex working · click Enable audio",
-    idle: "Codex finished · silent until the next turn",
+    working: audible ? (config().master === 0 ? working + " · master volume is zero" : working + " · bass melody + live actions") : working + " · click Enable audio",
+    idle: "All Codex sessions idle · waiting for work",
     cancelled: "Codex cancelled · sound stopped",
     unknown: reason || "Waiting for verified Codex state · silent"
   };
   $("link-state").textContent = descriptions[state] || descriptions.unknown;
   $("transport-label").textContent = descriptions[state] || descriptions.unknown;
-  $("transport-detail").textContent = "Session " + (live.session?.slice(0, 8) || "—") + " · bass follows work; actions add layers";
+  $("transport-detail").textContent = "All local Codex sessions · one shared bass melody" + (uncertainCount ? ` · ${uncertainCount} unverified` : "");
   $("activity-mode").textContent = state.toUpperCase();
   const visibleSession = state === "working" ? live.session : "";
   if (visualSession !== visibleSession) showVisualizer(visibleSession);
@@ -85,9 +86,8 @@ function labelMode(value) {
   mode = value;
   $("activity-mode").textContent = value.toUpperCase();
   $("codex-link").checked = value === "live";
-  $("link-state").textContent = value === "live" ? "Checking the selected Codex session…" : "OFF · audio disconnected";
+  $("link-state").textContent = value === "live" ? "Checking all local Codex sessions…" : "OFF · audio disconnected";
   $("connection-dot").classList.remove("connected");
-  $("sessions").disabled = value === "live";
   $("transport-label").textContent = value === "live" ? "Checking Codex state" : "Audio disconnected";
   $("transport-detail").textContent = "Bass melody while Codex works · real actions add layers";
 }
@@ -102,11 +102,11 @@ function showVisualizer(session = "") {
     const path = "/api/visualizer?session=" + encodeURIComponent(session);
     frame.src = path;
     open.href = path + "&full=1";
-    $("visualizer-label").textContent = "Session " + session.slice(0, 8);
+    $("visualizer-label").textContent = "All Turbella sessions";
   } else {
     frame.removeAttribute("src");
     open.removeAttribute("href");
-    $("visualizer-label").textContent = "Music + visuals · same session";
+    $("visualizer-label").textContent = "All-session visuals";
   }
 }
 function stop() {
@@ -158,7 +158,7 @@ function render() {
     if (["finish", "stopError", "failure", "permission", "denied", "think", "subagent", "notification"].includes(id)) {
       const info = document.createElement("td"); info.colSpan = 5;
       info.className = "muted";
-      info.textContent = id === "finish" ? "Automatic · completion or cancellation stops every sound" : "Not reported separately by this Codex connection";
+      info.textContent = id === "finish" ? "Automatic · sound stops when the last working session ends" : "Not reported separately by this Codex connection";
       row.append(info); $("mappings").append(row); continue;
     }
     for (const [field, choices] of [["sound", SOUNDS], ["pattern", PATTERNS]]) {
@@ -244,25 +244,8 @@ async function refresh() {
   try {
     const response = await fetch("/api/status");
     if (!response.ok) throw new Error("Cannot read local Codex sessions. Check that the local server is running.");
-    const status = await response.json();
-    const current = $("sessions").value;
-    const currentLabel = $("sessions").selectedOptions[0]?.textContent;
-    $("sessions").replaceChildren(...options({"": "Choose a session"}, ""));
-    for (const session of (status.sessions || []).filter(s => s.agent === "codex")) {
-      const option = document.createElement("option"); option.value = session.session;
-      const time = new Date(session.last).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
-      option.textContent = `${session.agent} · ${session.session.slice(0,8)} · ${time}`;
-      $("sessions").append(option);
-    }
-    if (mode === "live" && current && ![...$("sessions").options].some(o => o.value === current)) {
-      const option = document.createElement("option");
-      option.value = current; option.textContent = currentLabel;
-      $("sessions").append(option);
-    }
-    if (current && [...$("sessions").options].some(o => o.value === current)) $("sessions").value = current;
-    else if (status.preferredSession && [...$("sessions").options].some(o => o.value === status.preferredSession)) $("sessions").value = status.preferredSession;
-    else if ($("sessions").options.length > 1) $("sessions").selectedIndex = 1;
-    if (mode !== "live") $("connection-status").textContent = $("sessions").options.length > 1 ? "Local Codex logs found. Check the session ID below, then link audio." : "Send a prompt in Codex on this Mac, then refresh.";
+    await response.json();
+    if (mode !== "live") $("connection-status").textContent = "Ready to follow all local Codex sessions. New sessions join automatically.";
   } catch(error) {
     if (mode !== "live") $("connection-status").textContent = error.message;
   } finally {button.disabled = false;}
@@ -277,24 +260,21 @@ $("codex-link").addEventListener("change", async () => {
   // Resume browser audio directly from the user's switch gesture.
   await ready();
   if (token !== run) return;
-  if (!$("sessions").value) await refresh();
-  if (token !== run) return;
-  const session = $("sessions").value;
-  if (!session) {
-    stop(); toast("Send a prompt in Codex, then refresh sessions and turn the link on."); return;
-  }
+  const session = "all";
   classifier.reset();
   labelMode("live");
   live.connect(session);
-  $("connection-status").textContent = "Reading Codex session " + session.slice(0,8) + " directly from this Mac.";
+  $("connection-status").textContent = "Following all local Codex sessions. New sessions join automatically.";
   stream = new EventSource("/api/events?session=" + encodeURIComponent(session));
   stream.addEventListener("state", message => {
     if (token !== run) return;
     try {
       const snapshot = JSON.parse(message.data);
       const previous = live.state;
-      $("connection-status").textContent = "Following Codex " + session.slice(0,8) + " on this Mac.";
-      if (live.receive(snapshot) && previous !== snapshot.state) {
+      $("connection-status").textContent = "Following all local Codex sessions. New sessions join automatically.";
+      const accepted = live.receive(snapshot);
+      if (accepted) classifier.retain(live.activeSessions);
+      if (accepted && previous !== snapshot.state) {
         classifier.reset();
         if (["idle", "cancelled"].includes(snapshot.state)) log("finish", snapshot.state.toUpperCase());
       }
@@ -304,7 +284,7 @@ $("codex-link").addEventListener("change", async () => {
     if (token !== run) return;
     try {
       const event = JSON.parse(message.data);
-      if (live.action(event)) showAction(classifier.classify(event));
+      if (live.action(event)) showAction(classifier.classify(event), event.session.slice(0,8));
     } catch { toast("An unreadable event was skipped."); }
   });
   stream.onerror = () => {

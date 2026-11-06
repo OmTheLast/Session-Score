@@ -23,12 +23,12 @@ const server = http.createServer(async (req, res) => {
   }
   const url = new URL(req.url, `http://127.0.0.1:${boundPort}`);
   if (url.pathname === "/api/visualizer") {
-    const session = url.searchParams.get("session");
+    const session = url.searchParams.get("session") || "all";
     if (!session || session.length > 200) {
       res.writeHead(400).end("Choose a session."); return;
     }
     const target = new URL(`http://127.0.0.1:${upstreamPort}/viz`);
-    target.searchParams.set("session", session);
+    if (session !== "all") target.searchParams.set("session", session);
     if (!url.searchParams.has("full")) target.searchParams.set("overlay", "1");
     res.writeHead(302, {Location: target.href, "Cache-Control": "no-store"}).end();
     return;
@@ -36,17 +36,16 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/status") {
     try {
       const all = await sessions();
-      const preferred = process.env.CODEX_THREAD_ID;
-      const recent = all.filter((s, i) => i < 20 || s.session === preferred);
+      const recent = all.slice(0, 20);
       res.writeHead(200, {"Content-Type": "application/json", "Cache-Control": "no-store"})
-        .end(JSON.stringify({source: "codex-session-log", preferredSession: preferred,
+        .end(JSON.stringify({source: "codex-session-log", preferredSession: "all",
           sessions: recent.map(({session, last}) => ({session, last, agent: "codex"}))}));
     } catch { res.writeHead(503).end(JSON.stringify({error: "Local Codex session logs are unavailable."})); }
     return;
   }
   if (url.pathname === "/api/events") {
-    const session = url.searchParams.get("session");
-    if (!SESSION_ID.test(session || "")) { res.writeHead(400).end("Choose a Codex session."); return; }
+    const session = url.searchParams.get("session") || "all";
+    if (session !== "all" && !SESSION_ID.test(session || "")) { res.writeHead(400).end("Choose a Codex session."); return; }
     try { await followSession(session, res); }
     catch { if (!res.headersSent) res.writeHead(503).end("Cannot read this Codex session."); else res.end(); }
     return;
