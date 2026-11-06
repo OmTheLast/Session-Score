@@ -3,7 +3,8 @@ export const ACTIONS = [
   ["read", "Read a file", "A named read or inspect tool"],
   ["search", "Search", "A named search or browse tool"],
   ["edit", "Edit code", "Write, patch or change a file"],
-  ["command", "Run a command", "Shell commands and test tools"],
+  ["command", "Run a command", "Shell commands and execution wrappers"],
+  ["test", "Run tests", "An explicitly named test tool"],
   ["other", "Other tool", "Any tool we haven’t classified"],
   ["repeat", "Repeat an action", "Same tool and input, again"],
   ["return", "Tool returns", "The tool reports a normal return"],
@@ -22,11 +23,11 @@ export const SOUNDS = {
   piano: "Soft keys", strings: "String pad", lead: "Bright synth"
 };
 export const PATTERNS = {
-  hit: "Single hit", double: "Double hit", roll: "Four-hit roll",
-  rise: "Rising phrase", fall: "Falling phrase", hold: "Sustain"
+  hit: "Sparse phrase", double: "Steady phrase", roll: "Busy phrase",
+  rise: "Rising phrase", fall: "Falling phrase", hold: "Held notes"
 };
 const rule = (sound, pattern = "hit", level = 65, note = 0, enabled = true) => ({sound, pattern, level, note, enabled});
-export function preset(name) {
+function legacyPreset(name) {
   const mappings = Object.fromEntries(ACTIONS.map(([id]) => [id, rule("rim")]));
   Object.assign(mappings, {
     start: rule("kick"), read: rule("hat", "double", 35), search: rule("rim", "roll", 45),
@@ -56,29 +57,66 @@ export function preset(name) {
   }
   return {version: 1, preset: name, bpm: {classical: 84, electronic: 120, hyperpop: 150}[name] ?? 120, master: 55, arrangement: name === "electronic" ? "dark" : "actions", mappings};
 }
+export const PARTS = {keys: "Keys melody", arpeggio: "Synth sequence", chords: "Chord bed", groove: "Drums + synth", fill: "Short fill"};
+export const MIXER = {bass: "Bass melody", keys: "Keys", synth: "Synth", chords: "Chords", drums: "Drums"};
+const partFor = {start:"chords",read:"keys",search:"arpeggio",edit:"chords",command:"groove",test:"arpeggio",other:"keys",repeat:"fill",return:"keys"};
+export function preset(name) {
+  const config = legacyPreset(name);
+  config.version = 2;
+  config.engine = {intensity: 65, mix: {bass: 80, keys: 85, synth: 75, chords: 70, drums: 65}};
+  for (const [id] of ACTIONS) Object.assign(config.mappings[id], {part: partFor[id] || "fill", bars: id === "start" || id === "repeat" ? 1 : 2});
+  Object.assign(config.mappings, {
+    start: {...rule("strings", "hold", 35), part:"chords", bars:1},
+    read: {...rule("piano", "double", 60, -12), part:"keys", bars:2},
+    search: {...rule(name === "classical" ? "piano" : "lead", "rise", 52, -12), part:"arpeggio", bars:2},
+    edit: {...rule(name === "hyperpop" ? "lead" : "strings", "hold", 55, -12), part:"chords", bars:4},
+    command: {...rule("kick", "double", 65), part:"groove", bars:4},
+    test: {...rule("lead", "roll", 50, -12), part:"arpeggio", bars:2},
+    other: {...rule("piano", "fall", 45, -12), part:"keys", bars:2},
+    repeat: {...rule("rim", "roll", 40), part:"fill", bars:1}
+  });
+  return config;
+}
 export function validateConfig(value) {
   const number = (n, min, max) => Number.isFinite(n) && n >= min && n <= max;
-  if (value?.version !== 1 || !["classical", "electronic", "hyperpop"].includes(value.preset) ||
+  if (![1, 2].includes(value?.version) || !["classical", "electronic", "hyperpop"].includes(value.preset) ||
       !number(value.bpm, 60, 180) || !number(value.master, 0, 100)) throw new Error("This is not a Session Score preset file.");
-  const clean = preset(value.preset);
-  clean.bpm = value.bpm;
-  clean.master = value.master;
+  const clean = preset(value.preset), legacy = legacyPreset(value.preset);
+  clean.bpm = value.bpm; clean.master = value.master;
   if (value.arrangement !== undefined && !["dark", "actions"].includes(value.arrangement)) throw new Error("Unknown arrangement.");
   clean.arrangement = value.arrangement ?? clean.arrangement;
+  if (value.version === 2) {
+    if (!number(value.engine?.intensity, 0, 100)) throw new Error("Invalid activity intensity.");
+    clean.engine.intensity = value.engine.intensity;
+    for (const id of Object.keys(MIXER)) {
+      if (!number(value.engine?.mix?.[id], 0, 100)) throw new Error("Invalid mixer level.");
+      clean.engine.mix[id] = value.engine.mix[id];
+    }
+  }
   for (const [id] of ACTIONS) {
     const r = value.mappings?.[id];
+    if (!r && id === "test" && value.version === 1) continue;
     if (!r || !Object.hasOwn(SOUNDS, r.sound) || !Object.hasOwn(PATTERNS, r.pattern) ||
         !number(r.level, 0, 100) || !Number.isInteger(r.note) || r.note < -12 || r.note > 12 ||
         typeof r.enabled !== "boolean") throw new Error("The action settings in this file are incomplete or invalid.");
-    clean.mappings[id] = {sound: r.sound, pattern: r.pattern, level: r.level, note: r.note, enabled: r.enabled};
+    // Upgrade untouched legacy defaults; preserve every field a listener customized.
+    const next = clean.mappings[id];
+    for (const field of ["sound", "pattern", "level", "note", "enabled"]) {
+      if (value.version === 2 || r[field] !== legacy.mappings[id][field]) next[field] = r[field];
+    }
+    if (value.version === 2) {
+      if (!Object.hasOwn(PARTS, r.part) || ![1,2,4].includes(r.bars)) throw new Error("Invalid musical part or phrase length.");
+      next.part = r.part; next.bars = r.bars;
+    }
   }
   return clean;
 }
 const FAMILIES = {
+  test: ["test", "run_tests", "pytest", "vitest", "jest"],
   read: ["read", "read_file", "readfile", "view_file", "get_file"],
   search: ["search", "grep", "glob", "web_search", "browse", "web.run"],
   edit: ["edit", "write", "apply_patch", "write_file", "edit_file", "multiedit"],
-  command: ["bash", "shell", "exec_command", "exec", "run_command", "execute", "test"]
+  command: ["bash", "shell", "exec_command", "exec", "run_command", "execute"]
 };
 export class Classifier {
   reset() { this.previous = null; }

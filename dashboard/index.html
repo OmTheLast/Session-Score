@@ -35,12 +35,18 @@
     </div>
   </section>
 
+  <section class="mixer-panel" aria-labelledby="mixer-label">
+    <div class="section-heading"><h2 id="mixer-label">Shape the arrangement</h2><span class="muted">One shared track · all Codex sessions</span></div>
+    <div id="mixer-controls" class="mixer-controls"></div>
+    <p id="parts-status" class="muted" role="status">Parts follow live activity across all Codex sessions</p>
+    <p class="tiny">Activity adds musical phrases. Repeated work builds intensity; parts fade when activity stops. A bar is four beats. Melodic pitches stay in the track’s key.</p>
+  </section>
   <div class="workspace">
     <section class="mapping-panel" aria-labelledby="mapping-label">
-      <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted" id="mapping-help">Real actions add these sounds over the bass. Sounds share the same beat. The last session ending stops all sound.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
-      <div class="table-scroll"><table><thead><tr><th scope="col">AI ACTION</th><th scope="col">SOUND</th><th scope="col">PATTERN</th><th scope="col">PITCH</th><th scope="col">LEVEL</th><th scope="col"><span class="sr-only">Controls</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
-      <div class="mapping-footer"><span id="mapping-count">8 live sound rules · automatic stop</span><div><button class="text-button" id="import">Import settings</button><button class="text-button" id="export">Export settings ↗</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
-      <p class="mapping-note">Tool names decide the action. Shell commands share one sound, including tests. A repeat means the same input appeared again.</p>
+      <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted" id="mapping-help">Choose a musical part, instrument and phrase length for each activity. Parts share the bass melody’s key and beat.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
+      <div class="table-scroll"><table><thead><tr><th scope="col">AI ACTION</th><th scope="col">PART</th><th scope="col">SOUND</th><th scope="col">PATTERN</th><th scope="col">LENGTH</th><th scope="col">PITCH</th><th scope="col">LEVEL</th><th scope="col"><span class="sr-only">Controls</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
+      <div class="mapping-footer"><span id="mapping-count">9 live sound rules · automatic stop</span><div><button class="text-button" id="import">Import settings</button><button class="text-button" id="export">Export settings ↗</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
+      <p class="mapping-note">Named test tools have a test part. Shell wrappers remain command activity, even when they run tests. A repeat varies that session’s phrase and adds a fill. Success and failure are not inferred.</p>
     </section>
 
     <aside>

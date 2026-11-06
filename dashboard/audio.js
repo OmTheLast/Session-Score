@@ -30,11 +30,17 @@ export class AudioEngine {
     }
     this.sources.clear();
   }
+  stopBus(bus) {
+    for (const source of this.sources) if (source.scoreBus === bus) {
+      try { source.stop(); } catch {}
+      this.sources.delete(source);
+    }
+  }
   buffer(sound, semitones = 0) {
     const key = sound + semitones;
     if (this.buffers.has(key)) return this.buffers.get(key);
     const rate = this.context.sampleRate;
-    const duration = {bass: 2.6, sub: 1.3, kick: .55, snare: .28, clap: .27, hat: .09, openhat: .42, rim: .12, piano: 1.2, strings: 1.8, lead: .65}[sound];
+    const duration = {bass: 2.6, sub: 1.3, kick: .55, snare: .28, clap: .27, hat: .09, openhat: .42, rim: .12, piano: 1.8, strings: 3.5, lead: .9}[sound];
     const buffer = this.context.createBuffer(1, Math.ceil(rate * duration), rate);
     const data = buffer.getChannelData(0);
     const base = 55 * 2 ** (semitones / 12);
@@ -73,7 +79,7 @@ export class AudioEngine {
         if (sound === "piano") {
           value = (Math.sin(p + Math.sin(2 * p) * Math.exp(-t * 7)) + .2 * Math.sin(3 * p) * Math.exp(-t * 10)) * Math.exp(-t * 4) * .65;
         } else if (sound === "strings") {
-          value = (Math.sin(p) + .3 * Math.sin(2 * p) + .15 * Math.sin(3.003 * p)) * (1 - Math.exp(-t * 7)) * Math.exp(-t * 1.8) * .55;
+          value = (Math.sin(p) + .3 * Math.sin(2 * p) + .15 * Math.sin(3.003 * p)) * (1 - Math.exp(-t * 7)) * Math.exp(-t * .65) * .55;
         } else {
           value = (Math.sin(p) + .4 * Math.sin(2 * p) + .2 * Math.sin(p * 1.004)) * Math.exp(-t * 6) * .55;
         }
@@ -99,7 +105,7 @@ export class AudioEngine {
     }
   }
 
-  hit(sound, note, level, when, speed = 1, gateSeconds = null) {
+  hit(sound, note, level, when, speed = 1, gateSeconds = null, bus = "effects") {
     if (!this.context || this.sources.size >= 64 || level <= 0) return;
     const source = this.context.createBufferSource();
     const percussion = ["snare", "clap", "hat", "openhat", "rim"].includes(sound);
@@ -112,9 +118,15 @@ export class AudioEngine {
       gain.gain.setValueAtTime(gain.gain.value, when + Math.max(0, gateSeconds - .04));
       gain.gain.linearRampToValueAtTime(0, when + gateSeconds);
     }
-    source.connect(gain).connect(this.master);
+    source.scoreBus = bus;
+    let pan;
+    if (this.context.createStereoPanner) {
+      pan = this.context.createStereoPanner();
+      pan.pan.value = {keys:-.18,synth:.18,chords:.05}[bus] || 0;
+      source.connect(gain).connect(pan).connect(this.master);
+    } else source.connect(gain).connect(this.master);
     this.sources.add(source);
-    source.onended = () => {this.sources.delete(source); source.disconnect(); gain.disconnect();};
+    source.onended = () => {this.sources.delete(source); source.disconnect(); gain.disconnect(); pan?.disconnect();};
     source.start(when);
     if (Number.isFinite(gateSeconds) && gateSeconds > 0) source.stop(when + gateSeconds + .01);
   }

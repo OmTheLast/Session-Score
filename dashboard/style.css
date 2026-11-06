@@ -24,3 +24,5 @@
 .link-switch input:checked + .switch-track:before{background:#26321a;transform:translateX(16px)}
 .link-switch input:focus-visible + .switch-track{outline:2px solid var(--accent);outline-offset:3px}
 #link-state{color:#c6f16f;min-height:16px}
+
+.mixer-panel{border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:20px;margin:0 0 28px}.mixer-controls{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:20px}.mixer-controls label{display:grid;gap:9px;font-size:12px}.mixer-controls input{width:100%}.mixer-controls output{color:var(--accent)}#parts-status{font-size:12px;line-height:1.8;min-height:22px}table{min-width:970px}td:first-child{min-width:155px}@media(max-width:900px){.mixer-controls{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:500px){.mixer-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}

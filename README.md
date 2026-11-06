@@ -1,6 +1,6 @@
 # Session Score
 
-Session Score lets you choose what your coding agent sounds like. Start with Classical, Electronic or Hyperpop, then assign a sound and pattern to each action.
+Session Score lets you choose what your coding agent sounds like. Start with Classical, Electronic or Hyperpop, then let real agent activity build keys, synth, chord and drum parts over a bass melody.
 
 ## Open the dashboard
 
@@ -13,21 +13,23 @@ npm run dev
 Open [Session Score on your computer](http://127.0.0.1:8787). The dashboard uses Node's built-in server and browser audio. It has no npm dependencies.
 
 1. Turn **Link all Codex** on. It follows every local Codex session automatically, including new chats and resumed sessions. There is no session picker.
-2. While any session is working, a four-bar A-minor bass melody with held notes plays. Real tool actions add the sounds in **Make the rules**. The bass and accents share a beat.
-3. Choose Classical, Electronic or Hyperpop as starting sound settings, then change each action’s sound, pattern, pitch, level or mute. These settings do not simulate activity or start playback by themselves.
+2. While any session is working, a four-bar A-minor bass melody with held notes plays. Real tool actions activate the musical parts in **Make the rules** for one, two or four bars. The bass and accents share a beat.
+3. Choose Classical, Electronic or Hyperpop as starting sound settings, then change each action’s musical part, instrument, pattern, phrase length, pitch, level or mute. **Shape the arrangement** controls bass, keys, synth, chords and drums separately, plus how strongly repeated work builds intensity. These settings do not simulate activity or start playback by themselves.
 4. Finishing or cancelling one session leaves the music running if another session is still working. When the last working session ends, the bass, accents and queued notes stop. The link stays on for future work. **Disconnect audio** stops this page’s audio and connection. It does not cancel Codex.
 
 There is no scripted session preview or sound-audition player in the dashboard. Joining an active turn starts the bass immediately after the browser enables audio. Connecting while all sessions are idle stays silent. The status shows the number of working sessions; each action in the activity list carries its source session ID. If the browser suspends audio, the page shows **Enable audio**. Master volume at zero is also shown in the status.
 
-Edits save separately for each sound preset in this browser. Export and import preserve those settings. Older configuration files still load; their old arrangement field no longer changes live playback.
+Edits save separately for each sound preset in this browser. Export and import preserve those settings. Version 1 files migrate to version 2. Untouched default fields acquire the new musical settings; customized sound, pattern, pitch, level and mute fields are preserved. Mixer settings and musical roles are included in new exports. The old arrangement field no longer changes live playback.
 
 ### How the connection works
 
 The Node server reads local Codex JSONL session logs under `$CODEX_HOME/sessions`, or `~/.codex/sessions`. It follows `task_started`, `task_complete` and `turn_aborted` records for work state, and tool call/return records for musical accents. It polls tracked sessions every 300 milliseconds and discovers newly active files roughly every two seconds. Recently updated logs are reconstructed on connection; older logs join when they change. It reconstructs the current state when connecting, without replaying old actions. Compaction does not count as a turn ending.
 
-The browser receives only session IDs, state, timestamps, tool names and argument hashes. Prompts, tool arguments, outputs and reasoning text are not sent to it. Tool names determine the sound category. Shell tools and the `exec` wrapper use the command sound, regardless of what their contents do. Consecutive identical calls within the same session use the repeat mapping. Interleaved sessions keep separate repeat histories. Tool returns indicate a returned result, not proof that the command succeeded. The reader does not infer errors or approval requests from tool output; unavailable categories are labelled in the dashboard.
+The browser receives only session IDs, state, timestamps, tool names and argument hashes. Prompts, tool arguments, outputs and reasoning text are not sent to it. Tool names determine the activity. Explicitly named test tools have their own test part; tests inside generic shell wrappers remain command activity. Shell tools and the `exec` wrapper use the command sound, regardless of what their contents do. Consecutive identical calls within the same session use the repeat mapping. Interleaved sessions keep separate repeat histories. Tool returns indicate a returned result, not proof that the command succeeded. The reader does not infer errors or approval requests from tool output; unavailable categories are labelled in the dashboard.
 
-Accents start on an eighth-note grid. Repeated events in one subdivision share an accent, with at most two action patterns starting per eighth note. Only the bass repeats automatically. The selected action mappings control all other sounds.
+Real actions start musical parts on the shared clock. Reads add a keys phrase, searches add an arpeggio (notes of a chord played in sequence), edits add held chords, and command activity adds a drum groove with melodic synth accents. Named tests use a faster synth pattern. Repeats vary the session’s current phrase and add a fill. The bass keeps its four-bar melody. Harmonic parts follow the same chord progression, with pitches fitted to its key.
+
+Parts last one, two or four bars after activity, then fade. Further events renew them. Intensity builds at most once per beat, so bursts cannot instantly maximize the arrangement. Multiple sessions contributing the same musical role share a voice; at most three melodic parts, a groove and a fill are scheduled together. The status under the mixer names the activities, contributing-session count and remaining bars. A finished session’s contributions are removed; the last session ending cancels all audio. Changing a mixer channel to zero also stops its sounding notes.
 
 A lost browser connection pauses sound within about two seconds. If an open turn produces no new log records for two minutes, it is no longer counted as confirmed work. Music continues if another session is working; otherwise it pauses and reports uncertainty until fresh records arrive. This protects against abandoned sessions, but can also pause a very long tool or thinking interval. Completion or cancellation of the last working session stops sound on the next log poll, without waiting for the musical bar to end. Background-tab throttling and OS sleep can delay browser updates.
 
@@ -37,7 +39,7 @@ This reader supports the local log format verified during development. It does n
 
 Keep the local server running while listening. Press Control-C in its terminal to stop it. Use `PORT=8788 npm run dev` if the default port is occupied. Use `TURBELLA_PORT=7378 npm run dev` if the optional visualizer runs on another port.
 
-Run `npm test` for lifecycle, cancellation, reconnect, overlapping sessions, automatic discovery, independent repeat histories, event timing, configuration and generated-audio checks. See [ACTIONS.md](ACTIONS.md) for the current action contract.
+Run `npm test` for sustained parts, phrase expiry, bounded event bursts, harmonic alignment, settings migration, lifecycle, cancellation, reconnect, overlapping sessions, automatic discovery, independent repeat histories, event timing, configuration and generated-audio checks. See [ACTIONS.md](ACTIONS.md) for the current action contract.
 
 ## Earlier listening experiments
 

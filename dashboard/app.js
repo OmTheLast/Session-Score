@@ -1,4 +1,4 @@
-import {ACTIONS, SOUNDS, PATTERNS, SessionClassifiers, preset, validateConfig} from "./model.js";
+import {ACTIONS, SOUNDS, PATTERNS, PARTS, MIXER, SessionClassifiers, preset, validateConfig} from "./model.js";
 import {AudioEngine} from "./audio.js";
 import {DarkTrack} from "./dark-track.js";
 import {LiveSession} from "./live-session.js";
@@ -73,11 +73,12 @@ const live = new LiveSession({audio, track, onState: ({state, audible, reason, a
 }});
 let visualSession = "";
 setInterval(() => live.check(), 300);
-function showAction(action, source = "LIVE") {
+function showAction(action, session = "local") {
   if (!action) return;
   audio.volume(config().master);
-  track.event(action);
-  log(action, source);
+  track.event(action, session);
+  log(action, session.slice(0,8));
+  updateParts();
   const row = document.querySelector(`tr[data-action="${action}"]`);
   row?.classList.add("triggered");
   setTimeout(() => row?.classList.remove("triggered"), 350);
@@ -121,6 +122,7 @@ function stop() {
   audio.stop();
   if (mode === "live") $("connection-status").textContent = "Disconnected. Your settings are ready.";
   labelMode("idle");
+  updateParts();
 }
 async function ready() {
   try {
@@ -140,7 +142,34 @@ function options(values, chosen) {
     return option;
   });
 }
+function updateParts() {
+  const parts = track.summary();
+  $("parts-status").textContent = parts.length ? parts.map(p => {
+    const action = ACTIONS.find(([id]) => id === p.action)?.[1] || p.action;
+    return `${p.label} · ${action} · ${p.sessions} session${p.sessions === 1 ? "" : "s"} · ${p.barsLeft} bar${p.barsLeft === 1 ? "" : "s"} left`;
+  }).join(" / ") : live.state === "working" ? "Bass melody active · waiting for fresh actions to add parts" : "Parts follow live activity across all Codex sessions";
+}
+function renderMixer() {
+  $("mixer-controls").replaceChildren();
+  for (const [id, title] of Object.entries({...MIXER, intensity:"Activity intensity"})) {
+    const label = document.createElement("label");
+    const name = document.createElement("span"); name.textContent = title;
+    const input = document.createElement("input");
+    const current = () => id === "intensity" ? config().engine.intensity : config().engine.mix[id];
+    Object.assign(input,{type:"range",min:"0",max:"100",value:current()});
+    input.setAttribute("aria-label",title);
+    const output = document.createElement("output"); output.textContent = current()+"%";
+    input.addEventListener("input", () => {
+      const value = Number(input.value);
+      if (id === "intensity") config().engine.intensity = value;
+      else { config().engine.mix[id] = value; if (value === 0) audio.stopBus(id); }
+      output.textContent=value+"%"; save();
+    });
+    label.append(name,input,output); $("mixer-controls").append(label);
+  }
+}
 function render() {
+  renderMixer();
   for (const button of document.querySelectorAll("[data-preset]")) button.setAttribute("aria-pressed", String(button.dataset.preset === selected));
   $("tempo").value = config().bpm;
   $("master").value = config().master;
@@ -156,12 +185,12 @@ function render() {
     const detail = document.createElement("small"); detail.textContent = description;
     name.append(title, detail); row.append(name);
     if (["finish", "stopError", "failure", "permission", "denied", "think", "subagent", "notification"].includes(id)) {
-      const info = document.createElement("td"); info.colSpan = 5;
+      const info = document.createElement("td"); info.colSpan = 7;
       info.className = "muted";
       info.textContent = id === "finish" ? "Automatic · sound stops when the last working session ends" : "Not reported separately by this Codex connection";
       row.append(info); $("mappings").append(row); continue;
     }
-    for (const [field, choices] of [["sound", SOUNDS], ["pattern", PATTERNS]]) {
+    for (const [field, choices] of [["part", PARTS], ["sound", SOUNDS], ["pattern", PATTERNS]]) {
       const cell = document.createElement("td");
       const select = document.createElement("select");
       select.setAttribute("aria-label", label + " " + field);
@@ -169,6 +198,12 @@ function render() {
       select.addEventListener("change", () => {mapping[field] = select.value; save();});
       cell.append(select); row.append(cell);
     }
+    const barsCell = document.createElement("td");
+    const bars = document.createElement("select");
+    bars.setAttribute("aria-label",label + " phrase length");
+    bars.append(...options({1:"1 bar",2:"2 bars",4:"4 bars"},String(mapping.bars)));
+    bars.addEventListener("change", () => { mapping.bars=Number(bars.value);save(); });
+    barsCell.append(bars); row.append(barsCell);
     const pitchCell = document.createElement("td");
     const pitch = document.createElement("input");
     Object.assign(pitch, {type: "number", min: "-12", max: "12", step: "1", value: mapping.note, className: "pitch"});
@@ -273,7 +308,9 @@ $("codex-link").addEventListener("change", async () => {
       const previous = live.state;
       $("connection-status").textContent = "Following all local Codex sessions. New sessions join automatically.";
       const accepted = live.receive(snapshot);
-      if (accepted) classifier.retain(live.activeSessions);
+      if (accepted) {
+        classifier.retain(live.activeSessions); track.retainSessions(live.activeSessions); updateParts();
+      }
       if (accepted && previous !== snapshot.state) {
         classifier.reset();
         if (["idle", "cancelled"].includes(snapshot.state)) log("finish", snapshot.state.toUpperCase());
@@ -284,7 +321,7 @@ $("codex-link").addEventListener("change", async () => {
     if (token !== run) return;
     try {
       const event = JSON.parse(message.data);
-      if (live.action(event)) showAction(classifier.classify(event), event.session.slice(0,8));
+      if (live.action(event)) showAction(classifier.classify(event), event.session);
     } catch { toast("An unreadable event was skipped."); }
   });
   stream.onerror = () => {

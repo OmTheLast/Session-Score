@@ -40,7 +40,7 @@ test("import accepts complete presets and rejects corrupt or out-of-range settin
   assert.throws(() => validateConfig({version: 99}));
   const a = preset("electronic"), b = preset("electronic");
   a.mappings.edit.sound = "lead";
-  assert.equal(b.mappings.edit.sound, "sub");
+  assert.equal(b.mappings.edit.sound, "strings");
 });
 test("all generated sound buffers are finite, non-silent and have distinct audio", () => {
   const engine = new AudioEngine();
@@ -102,29 +102,19 @@ test("the foundation is bass only and live event bursts are bounded", () => {
   assert.ok(new Set(notes.map(n => n.note)).size >= 5);
   assert.ok(notes.some(n => n.steps >= 4));
   assert.deepEqual(Array.from({length: 64}, () => score.next()), phrase);
-  const calls = [], accents = [];
-  const audio = {context: {currentTime: 1}, hit: (...args) => calls.push(args), trigger: (...args) => accents.push(args)};
+  const busy = new DarkScore();
   const cfg = preset("electronic");
-  const track = new DarkTrack(audio, () => cfg);
-  track.start();
-  try {
-    for (let i = 0; i < 100; i++) track.event("edit");
-    track.event("search"); track.event("command");
-    assert.equal(track.pending.size, 3);
-    audio.context.currentTime = 1.1; track.schedule();
-    audio.context.currentTime = 1.2; track.schedule();
-    assert.equal(accents.length, 2);
-    assert.deepEqual(accents[0][0], cfg.mappings.edit);
-    track.stop();
-    assert.equal(track.pending.size, 0);
-  } finally { track.stop(); }
+  for (let i=0;i<100;i++) busy.event("edit","A",cfg);
+  assert.equal(busy.parts.size,1);
+  assert.equal([...busy.parts.values()][0].energy,1);
+  for (let i=0;i<64;i++) assert.ok(busy.next(cfg).length <= 12);
 });
 test("clock scheduling uses musical time and drops a delayed-tab backlog", () => {
   const calls = [];
   const audio = {context: {currentTime: 1}, hit: (...args) => calls.push(args)};
-  const track = new DarkTrack(audio, () => ({bpm: 120}));
+  const track = new DarkTrack(audio, () => preset("electronic"));
   track.score = new DarkScore();
-  track.at = .1;
+  track.at = .95;
   track.schedule();
   assert.ok(calls.length > 0 && calls.length < 15);
   assert.ok(calls.every(c => c[3] >= 1));
@@ -132,6 +122,11 @@ test("clock scheduling uses musical time and drops a delayed-tab backlog", () =>
   const count = calls.length;
   track.schedule();
   assert.equal(calls.length, count);
+  track.score.event("edit","A",preset("electronic"));
+  audio.context.currentTime=10;
+  track.schedule();
+  assert.equal(track.score.parts.size,0);
+  assert.ok(calls.slice(count).every(c => c[3] >= 10));
 });
 test("older saved presets acquire an arrangement and new files retain it", () => {
   const p = preset("electronic");
