@@ -14,7 +14,7 @@ export const ACTIONS = [
   ["think", "Thinking event", "A reported thinking interval"],
   ["subagent", "Subagent activity", "Activity from a helper agent"],
   ["notification", "Notification", "A general agent notification"],
-  ["finish", "Turn ends", "Confirmed completion or cancellation stops all audio"],
+  ["finish", "Turn ends", "Normal completion fades out; cancellation stops audio"],
   ["stopError", "Turn ends with error", "A reported end stops all audio"]
 ];
 export const SOUNDS = {
@@ -58,6 +58,7 @@ function legacyPreset(name) {
   return {version: 1, preset: name, bpm: {classical: 84, electronic: 120, hyperpop: 150}[name] ?? 120, master: 55, arrangement: name === "electronic" ? "dark" : "actions", mappings};
 }
 export const PARTS = {keys: "Keys melody", arpeggio: "Synth sequence", chords: "Chord bed", groove: "Drums + synth", fill: "Short fill"};
+export const VARIATIONS = {steady:"Steady", subtle:"Subtle", evolving:"Evolving"};
 export const MIXER = {bass: "Bass melody", keys: "Keys", synth: "Synth", chords: "Chords", drums: "Drums"};
 const partFor = {start:"chords",read:"keys",search:"arpeggio",edit:"chords",command:"groove",test:"arpeggio",other:"keys",repeat:"fill",return:"keys"};
 export function preset(name) {
@@ -75,6 +76,7 @@ export function preset(name) {
     other: {...rule("piano", "fall", 45, -12), part:"keys", bars:2},
     repeat: {...rule("rim", "roll", 40), part:"fill", bars:1}
   });
+  for (const mapping of Object.values(config.mappings)) mapping.variation = "subtle";
   return config;
 }
 export function validateConfig(value) {
@@ -107,6 +109,8 @@ export function validateConfig(value) {
     if (value.version === 2) {
       if (!Object.hasOwn(PARTS, r.part) || ![1,2,4].includes(r.bars)) throw new Error("Invalid musical part or phrase length.");
       next.part = r.part; next.bars = r.bars;
+      if (r.variation !== undefined && !Object.hasOwn(VARIATIONS, r.variation)) throw new Error("Invalid phrase variation.");
+      next.variation = r.variation ?? "subtle";
     }
   }
   return clean;

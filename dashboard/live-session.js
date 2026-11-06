@@ -12,6 +12,7 @@ export class LiveSession {
     }
     this.lastSeen = this.now();
     this.state = snapshot.state;
+    this.endReason = snapshot.endReason;
     this.activeSessions = new Set(snapshot.activeSessions || (snapshot.state === "working" ? [this.session] : []));
     this.uncertainCount = snapshot.uncertainCount || 0;
     this.sync(snapshot.reason);
@@ -19,9 +20,22 @@ export class LiveSession {
   }
   sync(reason = "") {
     const audible = this.connected && this.state === "working" && this.audio.context?.state === "running";
-    if (audible) this.track.start();
-    else { this.track.stop(); this.audio.stop(); }
-    this.onState({state: this.state, audible, reason, activeCount: this.activeSessions?.size || 0, uncertainCount: this.uncertainCount || 0,
+    if (audible) {
+      if (this.releaseUntil) this.audio.stop();
+      this.releaseUntil = 0;
+      this.track.start();
+    } else {
+      this.track.stop();
+      const normalEnd = this.connected && this.state === "idle" && this.endReason === "completed";
+      if (normalEnd && this.wasAudible && this.audio.release) {
+        this.audio.release(.8);
+        this.releaseUntil = this.now() + 800;
+      } else if (!normalEnd || !this.releaseUntil || this.now() >= this.releaseUntil) {
+        this.audio.stop(); this.releaseUntil = 0;
+      }
+    }
+    this.wasAudible = audible;
+    this.onState({releasing: this.releaseUntil > this.now(), state: this.state, audible, reason, activeCount: this.activeSessions?.size || 0, uncertainCount: this.uncertainCount || 0,
       audioBlocked: this.connected && this.state === "working" && !audible});
   }
   action(event) {
@@ -34,6 +48,7 @@ export class LiveSession {
   interrupted() { this.state = "unknown"; this.sync("Live connection interrupted; sound paused."); }
   disconnect() {
     this.connected = false; this.state = "unknown"; this.session = null; this.activeSessions = new Set(); this.uncertainCount = 0;
+    this.releaseUntil = 0; this.wasAudible = false; this.endReason = null;
     this.track.stop(); this.audio.stop();
   }
 }

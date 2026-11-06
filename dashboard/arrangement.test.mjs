@@ -146,3 +146,54 @@ test("tonal envelopes ramp in and out while preserving the scheduled onset",()=>
   assert.deepEqual(starts,[10]);assert.deepEqual(stops,[12.01]);
   assert.deepEqual(automation,[["set",0,10],["ramp",.325,10.25],["set",.325,11.5],["ramp",0,12]]);
 });
+
+test("completion cancels future notes and fades sounding notes without extending their gate",()=>{
+  const audio=new AudioEngine(), gains=[],sources=[];
+  audio.context={currentTime:10,createGain(){const calls=[];const node={gain:{value:1,setValueAtTime(...v){calls.push(["set",...v]);},linearRampToValueAtTime(...v){calls.push(["ramp",...v]);}},connect(){},disconnect(){},calls};gains.push(node);return node;},
+    createBufferSource(){const source={playbackRate:{value:1},connect(){},disconnect(){},start(){},stops:[],stop(t){this.stops.push(t);}};sources.push(source);return source;}};
+  audio.buffer=()=>({});audio.master={};
+  audio.hit("strings",0,50,9,1,5);audio.hit("bass",0,50,9.8,1,.4);audio.hit("piano",0,50,10.1,1,2);
+  const original=gains[0].calls.slice();audio.release(.8);
+  assert.deepEqual(gains[0].calls,original,"original attack and release stay intact");
+  assert.deepEqual(gains[1].calls,[["set",1,10],["ramp",0,10.8]]);
+  assert.equal(sources[0].stops.at(-1),10.8);
+  assert.ok(Math.abs(sources[1].stops.at(-1)-10.21)<1e-9);
+  assert.equal(sources[2].stops.at(-1),undefined,"future note cancelled immediately");
+  assert.equal(audio.sources.has(sources[2]),false);
+});
+
+test("each action has related audible variants, while steady remains unchanged",()=>{
+  for(const action of ["read","search","edit","command","test","other","repeat"]) {
+    for(const [variation,expected] of [["steady",1],["subtle",2],["evolving",3]]) {
+      const config=preset("electronic"),score=new DarkScore(),phrases=new Set();
+      config.engine.intensity=0;Object.assign(config.mappings[action],{variation,bars:1});
+      for(let pass=0;pass<3;pass++) {
+        score.event(action,"A",config);const notes=[];
+        for(let i=0;i<16;i++)for(const n of score.next(config).filter(n=>n.bus!=="bass"))notes.push([i,n.note,n.level,n.steps,n.sound]);
+        phrases.add(JSON.stringify(notes));
+        while(score.step%64)score.next(config); // Same harmonic bar for each comparison.
+      }
+      assert.equal(phrases.size,expected,`${action} ${variation}`);
+    }
+  }
+});
+
+test("variation stays fixed within a bar and bursts queue only one change",()=>{
+  const config=preset("electronic"),score=new DarkScore();config.mappings.read.variation="evolving";
+  score.event("read","A",config);score.next(config);
+  for(let i=0;i<50;i++)score.event("read","A",config);
+  assert.equal(score.parts.get("A:read").nextVariant,1);
+  while(score.step<16){score.next(config);assert.equal(score.parts.get("A:read").variant,0);}
+  score.next(config);assert.equal(score.parts.get("A:read").variant,1);
+  config.mappings.read.variation="steady";
+  while(score.step<32)score.next(config);
+  score.next(config);assert.equal(score.parts.get("A:read").variant,0);
+  score.retainSessions(new Set());assert.equal(score.variants.size,0);
+});
+
+test("variation settings round-trip and older version-two files gain subtle defaults",()=>{
+  const config=preset("electronic");config.mappings.read.variation="evolving";config.mappings.edit.variation="steady";
+  assert.deepEqual(validateConfig(JSON.parse(JSON.stringify(config))),config);
+  delete config.mappings.read.variation;assert.equal(validateConfig(config).mappings.read.variation,"subtle");
+  config.mappings.read.variation="random";assert.throws(()=>validateConfig(config),/variation/);
+});

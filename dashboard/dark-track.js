@@ -21,12 +21,21 @@ function inKey(note, bar) {
 }
 
 export class DarkScore {
-  constructor() { this.step = 0; this.parts = new Map(); }
+  constructor() { this.step = 0; this.parts = new Map(); this.variants = new Map(); }
+  queueVariation(part, config) {
+    const boundary = Math.ceil(this.step / 16) * 16;
+    if (part.variationBar === boundary) return;
+    const mode = config.mappings[part.action].variation || "subtle";
+    const count = mode === "steady" ? 1 : mode === "evolving" ? 3 : 2;
+    part.nextVariant = (part.nextVariant + 1) % count;
+    part.variationBar = boundary;
+    this.variants.set(part.session + ":" + part.action, part.nextVariant);
+  }
   event(action, session, config = DEFAULT) {
     if (!action || ["finish", "stopError"].includes(action)) return;
     if (action === "repeat") {
       const previous = [...this.parts.values()].filter(p => p.session === session && p.action !== "repeat").sort((a,b) => b.touched-a.touched)[0];
-      if (previous) { previous.nextVariant = (previous.nextVariant + 1) % 3; previous.expires = Math.max(previous.expires, Math.ceil(this.step/16)*16 + config.mappings[previous.action].bars * 16); }
+      if (previous) { this.queueVariation(previous, config); previous.expires = Math.max(previous.expires, Math.ceil(this.step/16)*16 + config.mappings[previous.action].bars * 16); }
     }
     const mapping = config.mappings[action];
     if (!mapping?.enabled || mapping.level === 0) return;
@@ -35,15 +44,24 @@ export class DarkScore {
     const previous = candidate?.expires > this.step ? candidate : null;
     const starts = Math.ceil(this.step / 16) * 16;
     const builds = previous && this.step - previous.built >= 4;
+    if (previous) this.queueVariation(previous, config);
+    const count = mapping.variation === "steady" ? 1 : mapping.variation === "evolving" ? 3 : 2;
+    const initialVariant = this.variants.has(key) ? (this.variants.get(key) + 1) % count : 0;
+    if (!previous) this.variants.set(key, initialVariant);
+    if (this.variants.size > 128) this.variants.delete(this.variants.keys().next().value);
     this.parts.set(key, {session, action, starts: previous?.starts ?? starts,
       expires: starts + mapping.bars * 16, touched:this.step,
       built: builds || !previous ? this.step : previous.built,
       energy: previous ? Math.min(3, previous.energy + (builds ? 1 : 0)) : 1,
-      variant: previous?.variant || 0, nextVariant:previous?.nextVariant || 0, gain:previous?.gain || 0});
+      variant: previous?.variant ?? initialVariant, nextVariant:previous?.nextVariant ?? initialVariant,
+      variationBar:previous?.variationBar, variation:previous?.variation, gain:previous?.gain || 0});
     // Bound memory even if a very large number of sessions are reported.
     if (this.parts.size > 128) this.parts.delete(this.parts.keys().next().value);
   }
-  retainSessions(ids) { for (const [key, part] of this.parts) if (!ids.has(part.session)) this.parts.delete(key); }
+  retainSessions(ids) {
+    for (const [key, part] of this.parts) if (!ids.has(part.session)) this.parts.delete(key);
+    for (const key of this.variants.keys()) if (!ids.has(key.slice(0,key.lastIndexOf(":")))) this.variants.delete(key);
+  }
   groups(config = DEFAULT) {
     const groups = new Map();
     for (const [key, part] of this.parts) {
@@ -78,7 +96,10 @@ export class DarkScore {
     const step = this.step, position = step % 16, bar = Math.floor(step/16)%4;
     const chord = CHORDS[bar], notes = [];
     for (const part of this.parts.values()) {
-      if (position === 0) part.variant = part.nextVariant;
+      if (position === 0) {
+        part.variation = config.mappings[part.action].variation || "subtle";
+        part.variant = part.nextVariant % (part.variation === "steady" ? 1 : part.variation === "evolving" ? 3 : 2);
+      }
       if (step >= part.starts) {
         const target = Math.min(1, Math.max(0,(part.expires-step)/8));
         part.gain += Math.max(-.15, Math.min(.15, target-part.gain));
@@ -103,28 +124,33 @@ export class DarkScore {
       const first = step === part.starts;
       let rhythm = PATTERN_STEPS[m.pattern];
       if (dense >= 2 && m.pattern === "double") rhythm = [0,4,6,8,12,14];
+      // Keep downbeats; evolving phrases only move a later, even-grid accent.
+      if (part.variation === "evolving" && variant && rhythm.includes(12))
+        rhythm = [...new Set(rhythm.map(n => n === 12 ? (variant === 1 ? 10 : 14) : n))].sort((a,b)=>a-b);
       const index = Math.max(0,rhythm.indexOf(position));
       const sequence = m.pattern === "fall" ? [2,1,0,1] : m.pattern === "rise" ? [0,1,2,1] : [0,2,1,2];
       const closest = [...chord].sort((a,b) => Math.abs(a-bassPitch)-Math.abs(b-bassPitch))[0];
-      const pitch = (m.part === "keys" ? bassPitch : variant ? chord[(sequence[index%4]+variant)%3] : closest) + m.note;
+      const pitch = (m.part === "keys" ? (variant && position >= 8 ? chord[(sequence[index%4]+variant)%3] : bassPitch) : variant ? chord[(sequence[index%4]+variant)%3] : closest) + m.note;
       if (m.part === "keys" || m.part === "arpeggio") {
         const arp = m.part === "arpeggio";
         if (rhythm.includes(position)) add(m.sound,pitch,level, m.pattern==="hold" ? 7.5 : arp ? 2.7 : 4,arp ? "synth":"keys");
       } else if (m.part === "chords") {
         if (m.pattern === "hold" ? position===0 : rhythm.includes(position)) {
           const chordLevel = m.level * (0.8+dense*.12) * .45;
-          for (const n of PERCUSSION.has(m.sound) ? [chord[0]] : chord) add(m.sound,n+m.note,chordLevel,m.pattern==="hold" ? 15.8 : 3.5,"chords",
+          // Omit one inner tone for a related, lighter voicing; keep the same register.
+          const voicing = variant === 1 ? [chord[0],chord[2]] : variant === 2 ? [chord[0],chord[1]] : chord;
+          for (const n of PERCUSSION.has(m.sound) ? [chord[0]] : voicing) add(m.sound,n+m.note,chordLevel,m.pattern==="hold" ? 15.8 : 3.5,"chords",
             {attackSteps:first ? 4 : 1, releaseSteps:part.expires-step<=16 ? (m.pattern==="hold" ? 8 : 1) : 2});
         }
       } else if (m.part === "groove") {
-        const kicks = m.pattern === "hit" ? [0,8] : m.pattern === "hold" ? [0] : [0,6,8];
+        const kicks = m.pattern === "hit" ? [0,8] : m.pattern === "hold" ? [0] : variant === 1 ? [0,8,12] : variant === 2 ? [0,4,8,14] : [0,6,8];
         if (kicks.includes(position) || (dense >= 2 || m.pattern === "roll") && position===14) add(m.sound,m.note,level,1.8,"drums");
         if (position===8) add("snare",0,level*.65,1.8,"drums");
-        if (position % (dense>=2 || m.pattern==="roll" ? 2:4)===0) add("hat",0,level*.36,1,"drums");
+        if (position % (dense>=2 || m.pattern==="roll" ? 2:4)===0) add("hat",0,level*(variant && position===4 ? .24 : .36),1,"drums");
         // Generic command wrappers still develop a musical phrase, not only percussion.
         if (!hasMelody && [8,12].includes(position)) add("lead",bassPitch-12,level*.55,3.5,"synth");
-      } else if (m.part === "fill" && ([12,14].includes(position))) {
-        add(m.sound,pitch,level,1,"drums");
+      } else if (m.part === "fill" && ((variant === 2 ? [8,12,14] : [12,14]).includes(position))) {
+        add(m.sound,pitch,level*(variant === 1 && position === 12 ? .55 : 1),1,"drums");
       }
     }
     this.step++;

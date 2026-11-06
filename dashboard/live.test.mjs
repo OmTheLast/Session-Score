@@ -222,3 +222,41 @@ test("all-session audio accepts active sources and stops only after the last one
   assert.equal(playing,false);
   assert.equal(live.action({session:"B"}),false);
 });
+
+test("normal completion releases once; idle heartbeats do not cut the tail or replay it", () => {
+  let now=100, releases=0, stops=0, playing=false, status;
+  const live=new LiveSession({now:()=>now, audio:{context:{state:"running"},stop(){stops++;},release(seconds){assert.equal(seconds,.8);releases++;}},
+    track:{start(){playing=true;},stop(){playing=false;}},onState:s=>status=s});
+  const receive=(state,endReason)=>live.receive({session:"all",state,endReason,activeSessions:state==="working"?["A"]:[]});
+  live.connect("all"); receive("idle","completed"); assert.equal(releases,0);
+  receive("working"); receive("idle","completed");
+  assert.equal(playing,false);assert.equal(releases,1);assert.equal(status.releasing,true);
+  const stopped=stops;now+=300;receive("idle","completed");assert.equal(stops,stopped);
+  now+=501;receive("idle","completed");assert.equal(releases,1);assert.equal(status.releasing,false);
+  receive("working");receive("idle","completed");const before=stops;
+  receive("working");assert.equal(stops,before+1);assert.equal(playing,true);
+  receive("idle","cancelled");assert.equal(releases,2);assert.equal(status.releasing,false);
+  receive("working");receive("idle","completed");live.interrupted();assert.equal(status.releasing,false);
+  receive("working");receive("idle","completed");live.disconnect();assert.equal(live.releaseUntil,0);
+});
+
+test("all-session completion outcome excludes old endings and missing active sessions", async () => {
+  const dir=await mkdtemp(join(tmpdir(),"score-ending-")), files=new Map();
+  const list=async()=>Promise.all([...files].map(async([session,path])=>({session,path,last:(await stat(path)).mtimeMs})));
+  async function append(id,type) {
+    if(!files.has(id))files.set(id,join(dir,id+".jsonl"));
+    await appendFile(files.get(id),line(lifecycle(type)));
+  }
+  try {
+    await append("old","task_complete");await append("A","task_started");await append("B","task_started");
+    const group=new SessionGroup({list});await group.read();
+    await append("A","turn_aborted");let state=await group.read();
+    assert.equal(state.state,"working");assert.equal(state.endReason,null);
+    await append("B","task_complete");state=await group.read();
+    assert.equal(state.endReason,"completed");assert.equal((await group.read()).endReason,"completed");
+    await append("A","task_started");await group.read();await append("A","turn_aborted");
+    assert.equal((await group.read()).endReason,"cancelled");
+    await append("A","task_started");await group.read();files.delete("A");
+    assert.equal((await group.read()).endReason,null);
+  } finally {await rm(dir,{recursive:true,force:true});}
+});

@@ -30,6 +30,21 @@ export class AudioEngine {
     }
     this.sources.clear();
   }
+  release(seconds = .8) {
+    if (!this.context) return;
+    const now = this.context.currentTime;
+    for (const source of this.sources) {
+      if (source.scoreStart >= now) {
+        try { source.stop(); } catch {}
+        this.sources.delete(source);
+        continue;
+      }
+      // A separate gain preserves each note's existing attack/release envelope.
+      source.scoreFade.setValueAtTime(1, now);
+      source.scoreFade.linearRampToValueAtTime(0, now + seconds);
+      try { source.stop(Math.min(source.scoreEnd, now + seconds)); } catch {}
+    }
+  }
   stopBus(bus) {
     for (const source of this.sources) if (source.scoreBus === bus) {
       try { source.stop(); } catch {}
@@ -124,14 +139,19 @@ export class AudioEngine {
       gain.gain.linearRampToValueAtTime(0, when+gateSeconds);
     }
     source.scoreBus = bus;
+    const fade = this.context.createGain();
+    fade.gain.value = 1;
+    source.scoreFade = fade.gain; source.scoreStart = when;
+    source.scoreEnd = Number.isFinite(gateSeconds) && gateSeconds > 0 ? when + gateSeconds + .01 : Infinity;
+    source.connect(gain); gain.connect(fade);
     let pan;
     if (this.context.createStereoPanner) {
       pan = this.context.createStereoPanner();
       pan.pan.value = {keys:-.18,synth:.18,chords:.05}[bus] || 0;
-      source.connect(gain).connect(pan).connect(this.master);
-    } else source.connect(gain).connect(this.master);
+      fade.connect(pan); pan.connect(this.master);
+    } else fade.connect(this.master);
     this.sources.add(source);
-    source.onended = () => {this.sources.delete(source); source.disconnect(); gain.disconnect(); pan?.disconnect();};
+    source.onended = () => {this.sources.delete(source); source.disconnect(); gain.disconnect(); fade.disconnect(); pan?.disconnect();};
     source.start(when);
     if (Number.isFinite(gateSeconds) && gateSeconds > 0) source.stop(when + gateSeconds + .01);
   }

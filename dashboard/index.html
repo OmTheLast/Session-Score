@@ -44,9 +44,9 @@
   <div class="workspace">
     <section class="mapping-panel" aria-labelledby="mapping-label">
       <div class="section-heading"><div><h2 id="mapping-label"><span class="number">02</span> Make the rules</h2><p class="muted" id="mapping-help">Choose a musical part, instrument and phrase length for each activity. Parts share the bass melody’s key and beat.</p></div><button id="reset" class="text-button">Reset preset ↺</button></div>
-      <div class="table-scroll"><table><thead><tr><th scope="col">AI ACTION</th><th scope="col">PART</th><th scope="col">SOUND</th><th scope="col">PATTERN</th><th scope="col">LENGTH</th><th scope="col">PITCH</th><th scope="col">LEVEL</th><th scope="col"><span class="sr-only">Controls</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
+      <div class="table-scroll"><table><thead><tr><th scope="col">AI ACTION</th><th scope="col">PART</th><th scope="col">SOUND</th><th scope="col">PATTERN</th><th scope="col">VARIATION</th><th scope="col">LENGTH</th><th scope="col">PITCH</th><th scope="col">LEVEL</th><th scope="col"><span class="sr-only">Controls</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
       <div class="mapping-footer"><span id="mapping-count">9 live sound rules · automatic stop</span><div><button class="text-button" id="import">Import settings</button><button class="text-button" id="export">Export settings ↗</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
-      <p class="mapping-note">Named test tools have a test part. Shell wrappers remain command activity, even when they run tests. A repeat varies that session’s phrase and adds a fill. Success and failure are not inferred.</p>
+      <p class="mapping-note">Named test tools have a test part. Shell wrappers remain command activity, even when they run tests. Variation: Steady repeats the motif, Subtle alternates two related versions, and Evolving uses three with more rhythm changes. New activity queues changes for the next bar. A repeat develops that session’s phrase and adds a fill. Success and failure are not inferred.</p>
     </section>
 
     <aside>
@@ -61,7 +61,7 @@
           <iframe id="turbella-view" title="Turbella visualizer for all sessions" hidden></iframe>
         </div>
         <div class="visualizer-caption"><span id="visualizer-label">All-session visuals</span><a id="visualizer-open" hidden target="_blank" rel="noreferrer">Open larger ↗</a></div>
-        <p class="tiny">Link all Codex enables one soundtrack for every local Codex session. Bass plays while any session works. Each session adds its action sounds. Playback stops when the last working session finishes or is cancelled. Disconnect audio silences this page; it does not stop Codex.</p>
+        <p class="tiny">Link all Codex enables one soundtrack for every local Codex session. Bass plays while any session works. Each session adds its action sounds. Normal completion fades existing notes for up to 0.8 seconds. Cancellation stops sound immediately. Disconnect audio silences this page; it does not stop Codex.</p>
       </section>
 
       <section class="side-panel activity-panel" aria-labelledby="activity-label"><div class="section-heading"><h2 id="activity-label">Activity</h2><span id="activity-mode" class="tag">IDLE</span></div><canvas id="meter" width="540" height="80" aria-label="Audio output meter"></canvas><ol id="activity"><li class="empty-activity">Your next action starts here.</li></ol></section>

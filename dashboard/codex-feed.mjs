@@ -16,11 +16,12 @@ export class TurnState {
     if (!Number.isFinite(ts)) return [];
     if (record.type === "event_msg") {
       if (p.type === "task_started") {
-        this.state = "working"; this.turn = p.turn_id; this.calls.clear();
+        this.state = "working"; this.turn = p.turn_id; this.endReason = null; this.calls.clear();
         return [{kind: "turn", status: "ok", ts}];
       }
       if (["task_complete", "turn_aborted"].includes(p.type) && (!p.turn_id || !this.turn || p.turn_id === this.turn)) {
         this.state = p.type === "turn_aborted" ? "cancelled" : "idle";
+        this.endReason = p.type === "turn_aborted" ? "cancelled" : "completed";
         this.calls.clear();
         return [{kind: "stop", status: p.type === "turn_aborted" ? "cancelled" : "ok", ts}];
       }
@@ -42,7 +43,7 @@ export class TurnState {
   }
   snapshot(mtime, now = Date.now()) {
     const stale = this.state === "working" && now - mtime > STALE_MS;
-    return {state: stale ? "unknown" : this.state, turn: this.turn,
+    return {state: stale ? "unknown" : this.state, turn: this.turn, endReason: this.endReason || null,
       reason: stale ? "No fresh Codex records for two minutes; sound paused." : "", lastRecord: mtime};
   }
 }
@@ -116,6 +117,14 @@ export class SessionGroup {
     }));
     const activeSessions = updates.filter(s => s.state === "working").map(s => s.session);
     const uncertain = updates.filter(s => s.state === "unknown");
+    // Only the sessions that were actually working can authorize a normal release.
+    if (activeSessions.length) this.endReason = null;
+    else if (this.activeSessions?.length) {
+      const ended = this.activeSessions.map(id => updates.find(s => s.session === id));
+      this.endReason = ended.every(s => s?.endReason === "completed") ? "completed"
+        : ended.some(s => s?.endReason === "cancelled") ? "cancelled" : null;
+    }
+    this.activeSessions = activeSessions;
     const events = this.initial ? [] : updates.filter(s => s.state === "working")
       .flatMap(s => s.events.filter(e => e.kind !== "stop" && e.ts >= this.startedAt && this.now() - e.ts < 2000)
         .map(e => ({...e, session: s.session}))).sort((a,b) => a.ts - b.ts);
@@ -125,7 +134,7 @@ export class SessionGroup {
       if ((s.state === "idle" || s.state === "cancelled") && this.now() - s.lastRecord > STALE_MS) this.readers.delete(s.session);
     }
     return {events, state: activeSessions.length ? "working" : uncertain.length ? "unknown" : "idle",
-      activeSessions, activeCount: activeSessions.length, uncertainCount: uncertain.length,
+      endReason: this.endReason || null, activeSessions, activeCount: activeSessions.length, uncertainCount: uncertain.length,
       reason: uncertain.length ? `${uncertain.length} session(s) have no reliable current state.` : ""};
   }
 }

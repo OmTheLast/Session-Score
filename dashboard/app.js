@@ -1,4 +1,4 @@
-import {ACTIONS, SOUNDS, PATTERNS, PARTS, MIXER, SessionClassifiers, preset, validateConfig} from "./model.js";
+import {ACTIONS, SOUNDS, PATTERNS, PARTS, VARIATIONS, MIXER, SessionClassifiers, preset, validateConfig} from "./model.js";
 import {AudioEngine} from "./audio.js";
 import {DarkTrack} from "./dark-track.js";
 import {LiveSession} from "./live-session.js";
@@ -54,13 +54,13 @@ function log(action, source) {
   list.prepend(item);
   while (list.children.length > 6) list.lastChild.remove();
 }
-const live = new LiveSession({audio, track, onState: ({state, audible, reason, audioBlocked, activeCount, uncertainCount}) => {
+const live = new LiveSession({audio, track, onState: ({state, audible, reason, audioBlocked, activeCount, uncertainCount, releasing}) => {
   $("connection-dot").classList.toggle("connected", state !== "unknown");
   $("enable-audio").hidden = !audioBlocked;
   const working = `${activeCount} Codex session${activeCount === 1 ? "" : "s"} working`;
   const descriptions = {
     working: audible ? (config().master === 0 ? working + " · master volume is zero" : working + " · bass melody + live actions") : working + " · click Enable audio",
-    idle: "All Codex sessions idle · waiting for work",
+    idle: releasing ? "All Codex sessions finished · fading out" : "All Codex sessions idle · waiting for work",
     cancelled: "Codex cancelled · sound stopped",
     unknown: reason || "Waiting for verified Codex state · silent"
   };
@@ -185,12 +185,12 @@ function render() {
     const detail = document.createElement("small"); detail.textContent = description;
     name.append(title, detail); row.append(name);
     if (["finish", "stopError", "failure", "permission", "denied", "think", "subagent", "notification"].includes(id)) {
-      const info = document.createElement("td"); info.colSpan = 7;
+      const info = document.createElement("td"); info.colSpan = 8;
       info.className = "muted";
-      info.textContent = id === "finish" ? "Automatic · sound stops when the last working session ends" : "Not reported separately by this Codex connection";
+      info.textContent = id === "finish" ? "Automatic · normal completion fades out; cancellation stops sound" : "Not reported separately by this Codex connection";
       row.append(info); $("mappings").append(row); continue;
     }
-    for (const [field, choices] of [["part", PARTS], ["sound", SOUNDS], ["pattern", PATTERNS]]) {
+    for (const [field, choices] of [["part", PARTS], ["sound", SOUNDS], ["pattern", PATTERNS], ["variation", VARIATIONS]]) {
       const cell = document.createElement("td");
       const select = document.createElement("select");
       select.setAttribute("aria-label", label + " " + field);
