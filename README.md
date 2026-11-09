@@ -60,6 +60,6 @@ The tests follow sample session logs through the local HTTP server, including ov
 
 [Turbella](https://github.com/NakliTechie/turbella) provides the optional visualizer. Session Score uses the browser’s Web Audio API to play the music.
 
-A project license has yet to be selected.
+Session Score is available under the [MIT License](LICENSE).
 
 [Listener guide](guide/index.html) · [Action rules](ACTIONS.md) · [Earlier audio sketches](samples/README.md) · [Changelog](CHANGELOG.md)

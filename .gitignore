@@ -3,3 +3,6 @@
 __pycache__/
 *.wav
 .DS_Store
+/plan
+/marketing
+/brag-output*
