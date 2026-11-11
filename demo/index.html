@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Score · Interactive demo</title>
+<meta name="description" content="Play a fictional Codex session through the Session Score music engine and add your own file reads, edits and commands.">
+<link rel="stylesheet" href="./demo.css"><script type="module" src="./player.js"></script>
+</head><body>
+<header><a href="https://ompatnaik.com/projects/session-score/">← Session Score</a><a href="./explorer.html">Feature explorer ↗</a></header>
+<main>
+<p class="eyebrow">Browser demo</p>
+<h1>Play a session.</h1>
+<p class="intro">Start with the bass. Hear a file read, an edit and a command join the beat. This fictional session plays in your browser.</p>
+<section class="deck" aria-label="Session player">
+<div class="controls"><label>Preset <select id="preset"><option value="electronic">Electronic</option><option value="classical">Classical</option><option value="hyperpop">Hyperpop</option></select></label>
+<button class="primary" id="play" disabled>Play demo</button></div>
+<div class="strip" id="bars" aria-hidden="true"></div>
+<p id="position">12 bars</p>
+<div class="layers"><div><h2>Add an action</h2><p>Each part enters on a bar line.</p><div class="actions" id="actions"></div></div>
+<div><h2>Current mix</h2><p id="mix">Silent</p></div></div>
+<p role="status" id="status">Loading the sample session…</p>
+</section>
+<p class="foot">In the Mac app, your own Codex sessions supply the actions. <a href="https://ompatnaik.com/projects/session-score/">Get the Mac beta ↗</a></p>
+</main></body></html>

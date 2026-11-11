@@ -94,6 +94,7 @@ test("real HTTP feed reconstructs state, skips history, and follows start/tool/e
       child.stdout.on("data", chunk => { const match = String(chunk).match(/http:\/\/127\.0\.0\.1:\d+/); if (match) {clearTimeout(timer);resolve(match[0]);} });
       child.on("error", reject);
     });
+    assert.equal((await fetch(url + "//[[")).status, 400);
     const status = await (await fetch(url + "/api/status")).json();
     assert.equal(status.preferredSession, "all");
     assert.equal(status.sessions[0].session, session);

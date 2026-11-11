@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Feature explorer · Session Score</title><meta name="description" content="Explore the path from a local Codex action to an instrument in Session Score.">
+<link rel="stylesheet" href="./demo.css"></head>
+<body><header><a href="https://ompatnaik.com/projects/session-score/">← Session Score</a><a href="./">Launch demo ↗</a></header>
+<main><p class="eyebrow">Feature explorer</p><h1>Inside the score.</h1><p class="intro">Follow a file read from a Codex session to a note in the mix. These features ship in the Mac beta.</p>
+<div class="search"><input id="search" type="search" placeholder="Find a feature or instrument" aria-label="Search features and dependencies"></div>
+<nav class="flow" aria-label="Signal path"><a href="#feed">Session feed</a> → <a href="#rules">Action rules</a> → <a href="#music">Arrangement</a> → <a href="#sound">Audio output</a></nav>
+<details id="feed"><summary>Session feed</summary><p>The Mac app reads local Codex session logs through its Electron process. Verified work starts playback. The last session to finish releases the music. The browser demo supplies a fictional session with three tool events.</p></details>
+<details id="rules"><summary>Action rules and presets</summary><p>The classifier turns a named tool into a read, edit or command. Choose Classical, Electronic or Hyperpop in the demo. The desktop mixer also lets you assign instruments, pitch, volume and phrase lengths per action.</p></details>
+<details id="music"><summary>Bass melody and arrangement</summary><p>One bass line sets the key and tempo. Actions queue keys, chords or drums for a bar boundary. The app includes ten bass melodies and can hold one or cycle through them.</p></details>
+<details id="sound"><summary>Synthesis and audio output</summary><p>The Web Audio engine synthesizes each note and mixes the layers. Normal completion fades sounding notes. Stop the demo to silence it immediately.</p></details>
+<p id="empty" hidden>No matching features.</p><p class="foot"><a href="./">Play the fictional session →</a></p>
+</main>
+<script>
+const search = document.querySelector("#search");
+const cards = [...document.querySelectorAll("details")];
+const nodes = [...document.querySelectorAll(".flow a")];
+function filter() {
+  const query = search.value.trim().toLowerCase();
+  cards.forEach(card => { card.hidden = !card.textContent.toLowerCase().includes(query); });
+  nodes.forEach(link => { link.hidden = document.querySelector(link.hash).hidden; });
+  document.querySelector(".flow").hidden = Boolean(query);
+  document.querySelector("#empty").hidden = cards.some(card => !card.hidden);
+}
+search.addEventListener("input", filter);
+nodes.forEach(link => link.addEventListener("click", () => { document.querySelector(link.hash).open = true; }));
+document.addEventListener("keydown", event => {
+  if (event.key === "/" && document.activeElement !== search) { event.preventDefault(); search.focus(); }
+  if (event.key === "Escape") { search.value = ""; filter(); search.blur(); }
+});
+</script></body></html>

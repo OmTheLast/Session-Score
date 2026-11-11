@@ -2,11 +2,11 @@
 
 **Hear what Codex is doing while you work. A bass line plays during a session, and each read, edit or command adds a part you can choose.**
 
-[Session Score website and Mac downloads](https://ompatnaik.com/projects/session-score/) · [Listen to the 22-second Electronic sketch from the original prototype](https://raw.githubusercontent.com/OmTheLast/Session-Score/main/electronic.mp3)
+[Try the browser demo](https://ompatnaik.com/projects/session-score/demo/) · [Session Score website and Mac downloads](https://ompatnaik.com/projects/session-score/) · [Listen to the 22-second Electronic sketch from the original prototype](https://raw.githubusercontent.com/OmTheLast/Session-Score/main/electronic.mp3)
 
 Runs as a Mac app with local Codex session logs. The app includes its runtime and reads the logs directly. Prompts and tool output stay out of the dashboard feed.
 
-Built by Om Patnaik in November 2026. [Source release v0.1.0](https://github.com/OmTheLast/Session-Score/releases/tag/v0.1.0)
+Built by Om Patnaik in November 2026. [Mac beta v0.2.0-beta.1](https://github.com/OmTheLast/Session-Score/releases/tag/v0.2.0-beta.1)
 
 ![Session Score mixer showing the Undertow bass melody, the hold control, and separate levels for bass, keys, synth, chords and drums](guide/mixer.png)
 
@@ -14,15 +14,10 @@ Built by Om Patnaik in November 2026. [Source release v0.1.0](https://github.com
 
 | Platform | Install |
 | --- | --- |
-| macOS, Apple silicon (tested) | Build the app from source using Node.js 22.12 or later and the Xcode Command Line Tools. |
+| macOS, Apple silicon (tested) | [Download the free beta ZIP](https://github.com/OmTheLast/Session-Score/releases/download/v0.2.0-beta.1/Session-Score-macOS-arm64.zip) for macOS 13 or later. |
 | Browser dashboard | With Node.js 22 or later, run `npm run dev` from the same checkout and open the printed address. |
 
-```sh
-git clone https://github.com/OmTheLast/Session-Score.git
-cd Session-Score
-npm run package:mac
-open dist/Session-Score-macOS-arm64.zip
-```
+Unzip the download. This beta is ad-hoc signed and Apple has not notarized it. If macOS blocks the first launch and you trust the GitHub download, open **System Settings → Privacy & Security → Open Anyway** and confirm. [Apple’s first-open instructions](https://support.apple.com/en-us/102445)
 
 Move the extracted **Session Score** app to Applications and open it. Turn on **Link all Codex** at the top of the window, then send a prompt in Codex. Bass starts when a session works. A read, edit or command adds a part on the next bar. You can close the terminal and keep listening.
 

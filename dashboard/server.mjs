@@ -14,7 +14,9 @@ const server = http.createServer(async (req, res) => {
       (req.headers.origin && ![`http://127.0.0.1:${boundPort}`, `http://localhost:${boundPort}`].includes(req.headers.origin))) {
     res.writeHead(403).end(); return;
   }
-  const url = new URL(req.url, `http://127.0.0.1:${boundPort}`);
+  let url;
+  try { url = new URL(req.url, `http://127.0.0.1:${boundPort}`); }
+  catch { res.writeHead(400).end("Invalid request target."); return; }
   if (url.pathname === "/api/visualizer") {
     const session = url.searchParams.get("session") || "all";
     if (!session || session.length > 200) {

@@ -24,7 +24,8 @@ ROUTES = [
     ('07-settings', 'browser', '.mapping-footer'), ('08-finish', 'browser', '.transport'),
     ('09-cli', 'cli', 'python3 play_live.py --help'),
 ]
-SESSION = '11111111-1111-4111-8111-111111111111'
+SEED = json.loads((ROOT / 'demo/seed/session.json').read_text())
+SESSION = SEED['session']
 
 
 def record(path, kind, payload):
@@ -50,7 +51,8 @@ def capture(page, path):
         elif slug == '03-activity':
             record(path, 'event_msg', dict(type='task_started', turn_id='guide'))
             expect(page.locator('#link-state')).to_contain_text('working', timeout=10000)
-            for name in ['read_file', 'apply_patch', 'exec_command']:
+            for action in SEED['events']:
+                name = action['tool']
                 record(path, 'response_item', dict(type='function_call', name=name, call_id=name, arguments='{}'))
             expect(page.locator('#activity')).to_contain_text('Run a command')
         elif slug == '04-mix':

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.0-beta.1] — 2026-11-11
+
+- The free Apple silicon Mac beta reads local Codex sessions directly. The ZIP includes the runtime and opens as a desktop app.
+- The website includes first-open instructions and an interactive browser demo with the same music engine and fictional session events.
+- The local browser server now returns HTTP 400 for a malformed request and continues serving the dashboard.
+
 ## [0.1.0] — 2026-11-09
 
 ### Added
