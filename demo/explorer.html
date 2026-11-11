@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="./demo.css"></head>
 <body><header><a href="https://ompatnaik.com/projects/session-score/">← Session Score</a><a href="./">Launch demo ↗</a></header>
 <main><p class="eyebrow">Feature explorer</p><h1>Inside the score.</h1><p class="intro">Follow a file read from a Codex session to a note in the mix. These features ship in the Mac beta.</p>
-<div class="search"><input id="search" type="search" placeholder="Find a feature or instrument" aria-label="Search features and dependencies"></div>
+<div class="search"><input id="search" disabled type="search" placeholder="Find a feature or instrument" aria-label="Search features and dependencies"></div>
 <nav class="flow" aria-label="Signal path"><a href="#feed">Session feed</a> → <a href="#rules">Action rules</a> → <a href="#music">Arrangement</a> → <a href="#sound">Audio output</a></nav>
 <details id="feed"><summary>Session feed</summary><p>The Mac app reads local Codex session logs through its Electron process. Verified work starts playback. The last session to finish releases the music. The browser demo supplies a fictional session with three tool events.</p></details>
 <details id="rules"><summary>Action rules and presets</summary><p>The classifier turns a named tool into a read, edit or command. Choose Classical, Electronic or Hyperpop in the demo. The desktop mixer also lets you assign instruments, pitch, volume and phrase lengths per action.</p></details>
@@ -24,6 +24,8 @@ function filter() {
   document.querySelector("#empty").hidden = cards.some(card => !card.hidden);
 }
 search.addEventListener("input", filter);
+search.disabled = false;
+filter();
 nodes.forEach(link => link.addEventListener("click", () => { document.querySelector(link.hash).open = true; }));
 document.addEventListener("keydown", event => {
   if (event.key === "/" && document.activeElement !== search) { event.preventDefault(); search.focus(); }
