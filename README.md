@@ -4,9 +4,9 @@
 
 [Listen to the 22-second Electronic sketch from the original prototype](https://raw.githubusercontent.com/OmTheLast/Session-Score/main/electronic.mp3)
 
-Runs on your computer with Node.js 22 or later and local Codex session logs. Prompts and tool output stay out of the dashboard feed.
+Runs as a Mac app with local Codex session logs. The app includes its runtime and reads the logs directly. Prompts and tool output stay out of the dashboard feed.
 
-Built by Om Patnaik in November 2026. [Release v0.1.0](https://github.com/OmTheLast/Session-Score/releases/tag/v0.1.0)
+Built by Om Patnaik in November 2026. [Source release v0.1.0](https://github.com/OmTheLast/Session-Score/releases/tag/v0.1.0)
 
 ![Session Score mixer showing the Undertow bass melody, the hold control, and separate levels for bass, keys, synth, chords and drums](guide/mixer.png)
 
@@ -14,15 +14,19 @@ Built by Om Patnaik in November 2026. [Release v0.1.0](https://github.com/OmTheL
 
 | Platform | Install |
 | --- | --- |
-| macOS (tested) | Install Node.js 22 or later and clone the repository with the commands below. |
-
-Start the dashboard, open the address printed in your terminal, and turn on **Link all Codex**. Send a prompt in Codex. You should hear bass when the session starts and see the action names as tools run.
+| macOS, Apple silicon (tested) | Build the app from source using Node.js 22.12 or later and the Xcode Command Line Tools. |
+| Browser dashboard | With Node.js 22 or later, run `npm run dev` from the same checkout and open the printed address. |
 
 ```sh
 git clone https://github.com/OmTheLast/Session-Score.git
 cd Session-Score
-npm run dev
+npm run package:mac
+open dist/Session-Score-macOS-arm64.zip
 ```
+
+Move the extracted **Session Score** app to Applications and open it. Turn on **Link all Codex** at the top of the window, then send a prompt in Codex. Bass starts when a session works. A read, edit or command adds a part on the next bar. You can close the terminal and keep listening.
+
+The app saves its own settings. To bring over a browser preset, use **Export settings** in the dashboard, then **Import settings** in the app. The local build is ad-hoc signed. Apple has not notarized it for distribution.
 
 To explore the controls before installing, download the listener guide and open it in your browser. Its screenshots show a sample session. [Download the listener guide](https://github.com/OmTheLast/Session-Score/raw/refs/heads/main/guide/index.html)
 
@@ -43,6 +47,7 @@ I wanted to hear my own coding sessions as they happened. The early version coul
 ## Commands
 
 ```sh
+npm run package:mac    # Build the Mac app and ZIP in dist/
 npm run dev            # Start the dashboard on port 8787
 PORT=8788 npm run dev  # Choose another port on macOS
 npm test               # Run the checks
@@ -54,7 +59,11 @@ npm test               # Run the checks
 npm test
 ```
 
-The tests follow sample session logs through the local HTTP server, including overlapping sessions, cancellations and reconnects. They also check that action phrases stay on the beat and that saved presets keep their settings.
+The tests follow sample session logs through the local HTTP server, including overlapping sessions, cancellations and reconnects. They also check that action phrases stay on the beat and that saved presets keep their settings. To check a built app, run the packaged playback test with an isolated Codex log and app profile.
+
+```sh
+uv run --with playwright python desktop/smoke.py "dist/Session Score-darwin-arm64/Session Score.app"
+```
 
 ## Credits and license
 
