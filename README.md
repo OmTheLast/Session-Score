@@ -2,7 +2,7 @@
 
 **Hear what Codex is doing while you work. A bass line plays during a session, and each read, edit or command adds a part you can choose.**
 
-[Listen to the 22-second Electronic sketch from the original prototype](https://raw.githubusercontent.com/OmTheLast/Session-Score/main/electronic.mp3)
+[Session Score website and Mac downloads](https://ompatnaik.com/projects/session-score/) · [Listen to the 22-second Electronic sketch from the original prototype](https://raw.githubusercontent.com/OmTheLast/Session-Score/main/electronic.mp3)
 
 Runs as a Mac app with local Codex session logs. The app includes its runtime and reads the logs directly. Prompts and tool output stay out of the dashboard feed.
 
@@ -71,4 +71,4 @@ uv run --with playwright python desktop/smoke.py "dist/Session Score-darwin-arm6
 
 Session Score is available under the [MIT License](LICENSE).
 
-[Listener guide](guide/index.html) · [Action rules](ACTIONS.md) · [Earlier audio sketches](samples/README.md) · [Changelog](CHANGELOG.md)
+[Listener guide](guide/index.html) · [Action rules](ACTIONS.md) · [Earlier audio sketches](samples/README.md) · [Changelog](CHANGELOG.md) · [Sign and publish the Mac app](desktop/DISTRIBUTION.md)

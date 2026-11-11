@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "node dashboard/server.mjs",
     "test": "node --test dashboard/*.test.mjs",
-    "package:mac": "npm ci --prefix desktop && node desktop/build.mjs"
+    "package:mac": "npm ci --prefix desktop && node desktop/build.mjs",
+    "release:mac": "npm ci --prefix desktop && node desktop/build.mjs --notarize"
   },
   "engines": {
     "node": ">=22"
