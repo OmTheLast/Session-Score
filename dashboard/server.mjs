@@ -2,18 +2,10 @@ import http from "node:http";
 import {readFile} from "node:fs/promises";
 import {sessions, followSession, SESSION_ID} from "./codex-feed.mjs";
 
+import {assets} from "./assets.mjs";
+
 const port = Number(process.env.PORT || 8787);
 const upstreamPort = Number(process.env.TURBELLA_PORT || 7377);
-const files = new Map([
-  ["/", ["index.html", "text/html"]],
-  ["/app.js", ["app.js", "text/javascript"]],
-  ["/phrases.js", ["phrases.js", "text/javascript"]],
-  ["/model.js", ["model.js", "text/javascript"]],
-  ["/audio.js", ["audio.js", "text/javascript"]],
-  ["/dark-track.js", ["dark-track.js", "text/javascript"]],
-  ["/live-session.js", ["live-session.js", "text/javascript"]],
-  ["/style.css", ["style.css", "text/css"]]
-]);
 const root = new URL(".", import.meta.url);
 const server = http.createServer(async (req, res) => {
   const boundPort = server.address().port;
@@ -51,7 +43,7 @@ const server = http.createServer(async (req, res) => {
     catch { if (!res.headersSent) res.writeHead(503).end("Cannot read this Codex session."); else res.end(); }
     return;
   }
-  const file = files.get(url.pathname);
+  const file = assets.get(url.pathname);
   if (!file) { res.writeHead(404).end("Not found"); return; }
   try {
     const body = await readFile(new URL(file[0], root));

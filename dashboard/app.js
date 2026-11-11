@@ -5,6 +5,8 @@ import {DarkTrack} from "./dark-track.js";
 import {LiveSession} from "./live-session.js";
 
 const $ = id => document.getElementById(id);
+const desktop = window.sessionScore;
+if (desktop) document.querySelector(".topbar").append($("codex-link").closest("label"));
 const audio = new AudioEngine();
 const classifier = new SessionClassifiers();
 let configs = Object.fromEntries(["classical", "electronic", "hyperpop"].map(name => [name, preset(name)]));
@@ -95,7 +97,7 @@ function labelMode(value) {
   $("transport-label").textContent = value === "live" ? "Checking Codex state" : "Audio disconnected";
   $("transport-detail").textContent = "Bass melody while Codex works · real actions add layers";
 }
-function showVisualizer(session = "") {
+async function showVisualizer(session = "") {
   visualSession = session;
   const frame = $("turbella-view");
   const open = $("visualizer-open");
@@ -103,11 +105,25 @@ function showVisualizer(session = "") {
   open.hidden = !session;
   $("visualizer-empty").hidden = Boolean(session);
   if (session) {
-    const path = "/api/visualizer?session=" + encodeURIComponent(session);
-    frame.src = path;
-    open.href = path + "&full=1";
+    if (desktop) {
+      const url = await desktop.visualizer().catch(() => null);
+      if (visualSession !== session) return;
+      if (!url) {
+        frame.hidden = open.hidden = true;
+        $("visualizer-empty").textContent = "Turbella is unavailable. Music follows Codex independently.";
+        $("visualizer-empty").hidden = false;
+        return;
+      }
+      frame.src = url + "?overlay=1";
+      open.href = url;
+    } else {
+      const path = "/api/visualizer?session=" + encodeURIComponent(session);
+      frame.src = path;
+      open.href = path + "&full=1";
+    }
     $("visualizer-label").textContent = "All Turbella sessions";
   } else {
+    $("visualizer-empty").textContent = "Turbella visuals appear while any Codex session works.";
     frame.removeAttribute("src");
     open.removeAttribute("href");
     $("visualizer-label").textContent = "All-session visuals";
@@ -315,9 +331,8 @@ $("import-file").addEventListener("change", async event => {
 async function refresh() {
   const button = $("refresh"); button.disabled = true;
   try {
-    const response = await fetch("/api/status");
-    if (!response.ok) throw new Error("Cannot read local Codex sessions. Check that the local server is running.");
-    await response.json();
+    const available = desktop ? await desktop.available() : (await fetch("/api/status")).ok;
+    if (!available) throw new Error("Cannot read local Codex sessions. Start a session in Codex, then refresh.");
     if (mode !== "live") $("connection-status").textContent = "Ready to follow all local Codex sessions. New sessions join automatically.";
   } catch(error) {
     if (mode !== "live") $("connection-status").textContent = error.message;
@@ -338,11 +353,9 @@ $("codex-link").addEventListener("change", async () => {
   labelMode("live");
   live.connect(session);
   $("connection-status").textContent = "Following all local Codex sessions. New sessions join automatically.";
-  stream = new EventSource("/api/events?session=" + encodeURIComponent(session));
-  stream.addEventListener("state", message => {
+  function receiveState(snapshot) {
     if (token !== run) return;
     try {
-      const snapshot = JSON.parse(message.data);
       const previous = live.state;
       $("connection-status").textContent = "Following all local Codex sessions. New sessions join automatically.";
       const accepted = live.receive(snapshot);
@@ -354,19 +367,56 @@ $("codex-link").addEventListener("change", async () => {
         if (["idle", "cancelled"].includes(snapshot.state)) log("finish", snapshot.state.toUpperCase());
       }
     } catch { live.interrupted(); }
-  });
-  stream.addEventListener("action", message => {
+  }
+  function receiveAction(event) {
     if (token !== run) return;
     try {
-      const event = JSON.parse(message.data);
       if (live.action(event)) showAction(classifier.classify(event), event.session);
     } catch { toast("An unreadable event was skipped."); }
-  });
-  stream.onerror = () => {
+  }
+  function interrupted() {
     if (token !== run) return;
     classifier.reset(); live.interrupted();
     $("connection-status").textContent = "Connection interrupted. Retrying the local Codex reader…";
-  };
+  }
+  if (desktop) {
+    let closed = false;
+    let timer;
+    stream = {close() {
+      closed = true;
+      clearTimeout(timer);
+      void desktop.unlink().catch(() => {});
+    }};
+    async function poll() {
+      try {
+        const update = await desktop.read();
+        if (!closed && update) {
+          const {events, ...state} = update;
+          receiveState(state);
+          for (const event of events) receiveAction(event);
+        }
+      } catch { if (!closed) interrupted(); }
+      if (!closed) timer = setTimeout(poll, 300);
+    }
+    try {
+      await desktop.link();
+      if (!closed) void poll();
+    } catch {
+      if (!closed) {
+        stop();
+        toast("Could not connect to the Codex reader. Turn on Link all Codex to try again.");
+      }
+    }
+  } else {
+    stream = new EventSource("/api/events?session=" + encodeURIComponent(session));
+    stream.addEventListener("state", message => {
+      try { receiveState(JSON.parse(message.data)); } catch { interrupted(); }
+    });
+    stream.addEventListener("action", message => {
+      try { receiveAction(JSON.parse(message.data)); } catch { toast("An unreadable event was skipped."); }
+    });
+    stream.onerror = interrupted;
+  }
 });
 $("enable-audio").addEventListener("click", async () => {
   if (await ready() && live.connected) live.sync();

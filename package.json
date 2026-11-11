@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "node dashboard/server.mjs",
-    "test": "node --test dashboard/*.test.mjs"
+    "test": "node --test dashboard/*.test.mjs",
+    "package:mac": "npm ci --prefix desktop && node desktop/build.mjs"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }
