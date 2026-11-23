@@ -3,6 +3,7 @@ import {ACTIONS, SOUNDS, PATTERNS, PARTS, VARIATIONS, MIXER, SessionClassifiers,
 import {AudioEngine} from "./audio.js";
 import {DarkTrack} from "./dark-track.js";
 import {LiveSession} from "./live-session.js";
+import {addEffects} from "./effects.js";
 
 const $ = id => document.getElementById(id);
 const desktop = window.sessionScore;
@@ -23,6 +24,9 @@ try {
 } catch { storageAvailable = false; }
 const config = () => configs[selected];
 const track = new DarkTrack(audio, config);
+// Reverb, delay, an activity filter and a kick duck, added once audio starts.
+let effects = null;
+setInterval(() => effects?.steer(config().bpm), 300);
 let stream = null;
 
 let mode = "idle";
@@ -81,6 +85,7 @@ setInterval(() => live.check(), 300);
 function showAction(action, session = "local") {
   if (!action) return;
   audio.volume(config().master);
+  effects?.action(action);
   track.event(action, session);
   log(action, session.slice(0,8));
   updateParts();
@@ -146,6 +151,7 @@ function stop() {
 async function ready() {
   try {
     await audio.ready();
+    effects ??= addEffects(audio);
     audio.volume(config().master);
     audio.context.onstatechange = () => { if (live.connected) live.sync(); };
     return true;

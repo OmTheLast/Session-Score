@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- The mix gains space and movement: a reverb, a dotted-eighth delay, a low-pass filter that opens as work gets busier and rings when actions repeat, and a duck on every kick. Drums stay dry and the bass stays out of the reverb.
+
 ## [0.2.0-beta.1] — 2026-11-11
 
 - The free Apple silicon Mac beta reads local Codex sessions directly. The ZIP includes the runtime and opens as a desktop app.

@@ -5,6 +5,7 @@ export const assets = new Map([
   ["/phrases.js", ["phrases.js", "text/javascript"]],
   ["/model.js", ["model.js", "text/javascript"]],
   ["/audio.js", ["audio.js", "text/javascript"]],
+  ["/effects.js", ["effects.js", "text/javascript"]],
   ["/dark-track.js", ["dark-track.js", "text/javascript"]],
   ["/live-session.js", ["live-session.js", "text/javascript"]],
   ["/style.css", ["style.css", "text/css"]]
