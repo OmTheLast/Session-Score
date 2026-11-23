@@ -3,7 +3,12 @@ import {readFile} from "node:fs/promises";
 import {sessions, followSession, SESSION_ID} from "./codex-feed.mjs";
 
 import {assets} from "./assets.mjs";
+import {followTurbella, turbellaStatus} from "./turbella-feed.mjs";
 
+// Where the score comes from: Codex session logs (default), or every agent a local
+// Turbella daemon follows. Choose with SESSION_SCORE_SOURCE or ?source= on the request.
+const sourceOf = url => ["codex", "turbella"].includes(url.searchParams.get("source")) ? url.searchParams.get("source")
+  : process.env.SESSION_SCORE_SOURCE === "turbella" ? "turbella" : "codex";
 const port = Number(process.env.PORT || 8787);
 const upstreamPort = Number(process.env.TURBELLA_PORT || 7377);
 const root = new URL(".", import.meta.url);
@@ -28,6 +33,15 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(302, {Location: target.href, "Cache-Control": "no-store"}).end();
     return;
   }
+  if (url.pathname === "/api/status" && sourceOf(url) === "turbella") {
+    try {
+      const status = await turbellaStatus(upstreamPort);
+      res.writeHead(200, {"Content-Type": "application/json", "Cache-Control": "no-store"})
+        .end(JSON.stringify({source: "turbella", preferredSession: "all",
+          sessions: (status.sessions || []).slice(0, 20).map(({session, last, agent}) => ({session, last, agent}))}));
+    } catch { res.writeHead(503).end(JSON.stringify({error: "Turbella is not running. Start it with: turbella start"})); }
+    return;
+  }
   if (url.pathname === "/api/status") {
     try {
       const all = await sessions();
@@ -36,6 +50,11 @@ const server = http.createServer(async (req, res) => {
         .end(JSON.stringify({source: "codex-session-log", preferredSession: "all",
           sessions: recent.map(({session, last}) => ({session, last, agent: "codex"}))}));
     } catch { res.writeHead(503).end(JSON.stringify({error: "Local Codex session logs are unavailable."})); }
+    return;
+  }
+  if (url.pathname === "/api/events" && sourceOf(url) === "turbella") {
+    try { await followTurbella(res, {port: upstreamPort}); }
+    catch { if (!res.headersSent) res.writeHead(503).end("Cannot read Turbella."); else res.end(); }
     return;
   }
   if (url.pathname === "/api/events") {

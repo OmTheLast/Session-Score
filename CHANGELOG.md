@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- The browser dashboard can play the score for every agent a local Turbella daemon follows (Claude Code, Codex, Copilot CLI, Cursor, Hermes, opencode, pi and omp), not only Codex. Start it with `npm run dev:agents`; Codex logs stay the default source.
+
 ## [0.2.0-beta.1] — 2026-11-11
 
 - The free Apple silicon Mac beta reads local Codex sessions directly. The ZIP includes the runtime and opens as a desktop app.

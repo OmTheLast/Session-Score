@@ -6,6 +6,23 @@ import {LiveSession} from "./live-session.js";
 
 const $ = id => document.getElementById(id);
 const desktop = window.sessionScore;
+// The dashboard follows Codex session logs by default. With the Turbella source
+// (?source=turbella, or SESSION_SCORE_SOURCE=turbella on the server) it follows every
+// agent Turbella sees, so the wording says "agent" instead of "Codex".
+const sourceParam = new URLSearchParams(location.search).get("source");
+const sourceQuery = sourceParam ? "&source=" + encodeURIComponent(sourceParam) : "";
+let anyAgent = false;
+const WORDING = [["Link all Codex", "Link all agents"], ["Codex works", "an agent works"], ["Codex cancelled", "An agent cancelled"],
+  ["any Codex session", "any agent session"], ["Codex independently", "the agents independently"], ["Codex sessions", "agent sessions"],
+  ["Codex session", "agent session"], ["in Codex", "in your agent"], ["Codex reader", "agent reader"], ["Codex state", "agent state"],
+  ["Codex records", "agent records"], ["stop Codex", "stop your agents"], ["Codex", "your agent"]];
+const c = text => anyAgent ? WORDING.reduce((out, [from, to]) => out.replaceAll(from, to), text) : text;
+function useAnyAgent() {
+  if (anyAgent) return;
+  anyAgent = true;
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) if (node.nodeValue.includes("Codex")) node.nodeValue = c(node.nodeValue);
+}
 if (desktop) document.querySelector(".topbar").append($("codex-link").closest("label"));
 const audio = new AudioEngine();
 const classifier = new SessionClassifiers();
@@ -62,16 +79,16 @@ function log(action, source) {
 const live = new LiveSession({audio, track, onState: ({state, audible, reason, audioBlocked, activeCount, uncertainCount, releasing}) => {
   $("connection-dot").classList.toggle("connected", state !== "unknown");
   $("enable-audio").hidden = !audioBlocked;
-  const working = `${activeCount} Codex session${activeCount === 1 ? "" : "s"} working`;
+  const working = c(`${activeCount} Codex session${activeCount === 1 ? "" : "s"} working`);
   const descriptions = {
     working: audible ? (config().master === 0 ? working + " · master volume is zero" : working + " · bass melody + live actions") : working + " · click Enable audio",
-    idle: releasing ? "All Codex sessions finished · fading out" : "All Codex sessions idle · waiting for work",
-    cancelled: "Codex cancelled · sound stopped",
-    unknown: reason || "Waiting for verified Codex state · silent"
+    idle: releasing ? c("All Codex sessions finished · fading out") : c("All Codex sessions idle · waiting for work"),
+    cancelled: c("Codex cancelled · sound stopped"),
+    unknown: reason || c("Waiting for verified Codex state · silent")
   };
   $("link-state").textContent = descriptions[state] || descriptions.unknown;
   $("transport-label").textContent = descriptions[state] || descriptions.unknown;
-  $("transport-detail").textContent = "All local Codex sessions · one shared bass melody" + (uncertainCount ? ` · ${uncertainCount} unverified` : "");
+  $("transport-detail").textContent = c("All local Codex sessions · one shared bass melody") + (uncertainCount ? ` · ${uncertainCount} unverified` : "");
   $("activity-mode").textContent = state.toUpperCase();
   const visibleSession = state === "working" ? live.session : "";
   if (visualSession !== visibleSession) showVisualizer(visibleSession);
@@ -92,10 +109,10 @@ function labelMode(value) {
   mode = value;
   $("activity-mode").textContent = value.toUpperCase();
   $("codex-link").checked = value === "live";
-  $("link-state").textContent = value === "live" ? "Checking all local Codex sessions…" : "OFF · audio disconnected";
+  $("link-state").textContent = value === "live" ? c("Checking all local Codex sessions…") : "OFF · audio disconnected";
   $("connection-dot").classList.remove("connected");
-  $("transport-label").textContent = value === "live" ? "Checking Codex state" : "Audio disconnected";
-  $("transport-detail").textContent = "Bass melody while Codex works · real actions add layers";
+  $("transport-label").textContent = value === "live" ? c("Checking Codex state") : "Audio disconnected";
+  $("transport-detail").textContent = c("Bass melody while Codex works · real actions add layers");
 }
 async function showVisualizer(session = "") {
   visualSession = session;
@@ -110,7 +127,7 @@ async function showVisualizer(session = "") {
       if (visualSession !== session) return;
       if (!url) {
         frame.hidden = open.hidden = true;
-        $("visualizer-empty").textContent = "Turbella is unavailable. Music follows Codex independently.";
+        $("visualizer-empty").textContent = c("Turbella is unavailable. Music follows Codex independently.");
         $("visualizer-empty").hidden = false;
         return;
       }
@@ -123,7 +140,7 @@ async function showVisualizer(session = "") {
     }
     $("visualizer-label").textContent = "All Turbella sessions";
   } else {
-    $("visualizer-empty").textContent = "Turbella visuals appear while any Codex session works.";
+    $("visualizer-empty").textContent = c("Turbella visuals appear while any Codex session works.");
     frame.removeAttribute("src");
     open.removeAttribute("href");
     $("visualizer-label").textContent = "All-session visuals";
@@ -171,7 +188,7 @@ function updateParts() {
   $("parts-status").textContent = parts.length ? parts.map(p => {
     const action = ACTIONS.find(([id]) => id === p.action)?.[1] || p.action;
     return `${p.label} · ${action} · ${p.sessions} session${p.sessions === 1 ? "" : "s"} · ${p.waiting ? "starts next bar" : `${p.barsLeft} bar${p.barsLeft === 1 ? "" : "s"} left`}`;
-  }).join(" / ") : live.state === "working" ? "Bass melody active · waiting for fresh actions to add parts" : "Parts follow live activity across all Codex sessions";
+  }).join(" / ") : live.state === "working" ? "Bass melody active · waiting for fresh actions to add parts" : c("Parts follow live activity across all Codex sessions");
 }
 function renderInventory() {
   $("action-inventory").replaceChildren();
@@ -241,7 +258,7 @@ function render() {
     if (["finish", "stopError", "failure", "permission", "denied", "think", "subagent", "notification"].includes(id)) {
       const info = document.createElement("td"); info.colSpan = 8;
       info.className = "muted";
-      info.textContent = id === "finish" ? "Automatic · normal completion fades out; cancellation stops sound" : "Not reported separately by this Codex connection";
+      info.textContent = id === "finish" ? "Automatic · normal completion fades out; cancellation stops sound" : c("Not reported separately by this Codex connection");
       row.append(info); $("mappings").append(row); continue;
     }
     for (const [field, choices] of [["part", PARTS], ["sound", SOUNDS], ["pattern", PATTERNS], ["variation", VARIATIONS]]) {
@@ -331,9 +348,15 @@ $("import-file").addEventListener("change", async event => {
 async function refresh() {
   const button = $("refresh"); button.disabled = true;
   try {
-    const available = desktop ? await desktop.available() : (await fetch("/api/status")).ok;
-    if (!available) throw new Error("Cannot read local Codex sessions. Start a session in Codex, then refresh.");
-    if (mode !== "live") $("connection-status").textContent = "Ready to follow all local Codex sessions. New sessions join automatically.";
+    let available = false;
+    if (desktop) available = await desktop.available();
+    else {
+      const response = await fetch("/api/status" + sourceQuery.replace("&", "?"));
+      available = response.ok;
+      if (available && (await response.json()).source === "turbella") useAnyAgent();
+    }
+    if (!available) throw new Error(c("Cannot read local Codex sessions. Start a session in Codex, then refresh."));
+    if (mode !== "live") $("connection-status").textContent = c("Ready to follow all local Codex sessions. New sessions join automatically.");
   } catch(error) {
     if (mode !== "live") $("connection-status").textContent = error.message;
   } finally {button.disabled = false;}
@@ -352,12 +375,12 @@ $("codex-link").addEventListener("change", async () => {
   classifier.reset();
   labelMode("live");
   live.connect(session);
-  $("connection-status").textContent = "Following all local Codex sessions. New sessions join automatically.";
+  $("connection-status").textContent = c("Following all local Codex sessions. New sessions join automatically.");
   function receiveState(snapshot) {
     if (token !== run) return;
     try {
       const previous = live.state;
-      $("connection-status").textContent = "Following all local Codex sessions. New sessions join automatically.";
+      $("connection-status").textContent = c("Following all local Codex sessions. New sessions join automatically.");
       const accepted = live.receive(snapshot);
       if (accepted) {
         classifier.retain(live.activeSessions); track.retainSessions(live.activeSessions); updateParts();
@@ -377,7 +400,7 @@ $("codex-link").addEventListener("change", async () => {
   function interrupted() {
     if (token !== run) return;
     classifier.reset(); live.interrupted();
-    $("connection-status").textContent = "Connection interrupted. Retrying the local Codex reader…";
+    $("connection-status").textContent = c("Connection interrupted. Retrying the local Codex reader…");
   }
   if (desktop) {
     let closed = false;
@@ -404,11 +427,11 @@ $("codex-link").addEventListener("change", async () => {
     } catch {
       if (!closed) {
         stop();
-        toast("Could not connect to the Codex reader. Turn on Link all Codex to try again.");
+        toast(c("Could not connect to the Codex reader. Turn on Link all Codex to try again."));
       }
     }
   } else {
-    stream = new EventSource("/api/events?session=" + encodeURIComponent(session));
+    stream = new EventSource("/api/events?session=" + encodeURIComponent(session) + sourceQuery);
     stream.addEventListener("state", message => {
       try { receiveState(JSON.parse(message.data)); } catch { interrupted(); }
     });

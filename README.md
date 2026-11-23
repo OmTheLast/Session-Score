@@ -29,6 +29,17 @@ To explore the controls before installing, download the listener guide and open 
 
 When you switch away from a long coding session, you lose track of whether the agent is searching, making changes or finished. Session Score follows the work across all your local Codex sessions. When the last one finishes, the music fades.
 
+## Hear every agent, not only Codex
+
+[Turbella](https://github.com/NakliTechie/turbella) follows Claude Code, Codex, Copilot CLI, Cursor, Hermes, opencode, pi and omp, and draws their work as the visualizer next to the music. Install it, then start the dashboard on its stream:
+
+```sh
+turbella start         # in the Turbella checkout, once
+npm run dev:agents     # Session Score plays every agent Turbella sees
+```
+
+Claude Code and Codex tool names map to the same read, search, edit and command parts. Turbella sends names, statuses and hashes only, so prompts and tool output never reach the score. The Mac app still reads Codex logs directly.
+
 ## Choose what an action sounds like
 
 Pick Classical, Electronic or Hyperpop. Under **Make the rules**, try assigning keys to file reads and a drum groove to commands. Each part enters on the next bar, so events that happen at irregular times share a beat. You can set each part to last one, two, four or eight bars.
@@ -44,6 +55,7 @@ I wanted to hear my own coding sessions as they happened. The early version coul
 ```sh
 npm run package:mac    # Build the Mac app and ZIP in dist/
 npm run dev            # Start the dashboard on port 8787
+npm run dev:agents     # The same, following every agent Turbella sees
 PORT=8788 npm run dev  # Choose another port on macOS
 npm test               # Run the checks
 ```

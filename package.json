@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "node dashboard/server.mjs",
+    "dev:agents": "SESSION_SCORE_SOURCE=turbella node dashboard/server.mjs",
     "test": "node --test dashboard/*.test.mjs",
     "package:mac": "npm ci --prefix desktop && node desktop/build.mjs",
     "release:mac": "npm ci --prefix desktop && node desktop/build.mjs --notarize"
